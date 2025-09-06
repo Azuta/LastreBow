@@ -1,0 +1,74 @@
+/* src/components/ui/cards/BigCard.module.css */
+
+.item {
+  width: 100%;
+  height: 100%; /* Ocupa la altura del slide de Swiper */
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+}
+
+.number {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+  width: 40px;
+  text-align: center;
+  font-weight: 600;
+  cursor: default;
+}
+
+.number_span {
+  position: absolute;
+  bottom: 0;
+  font-size: 20px;
+  line-height: 1em;
+  text-align: center;
+  color: #ffbade;
+  z-index: 9;
+  left: 0;
+  right: 0;
+}
+
+.film_title {
+  width: 150px;
+  text-align: left;
+  height: 40px;
+  transform: rotate(-90deg);
+  position: absolute;
+  bottom: 90px;
+  line-height: 40px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  left: -55px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.film_poster {
+  display: inline-block;
+  position: absolute;
+  left: 40px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+.film_poster_img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  left: 0;
+  top: 0;
+  transition: all 0.5s ease 0s;
+}
+
+.film_poster:hover .film_poster_img {
+  transform: scale(1.1);
+}

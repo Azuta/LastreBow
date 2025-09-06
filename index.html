@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diseño de Página de Inicio - MangaList</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos generales */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a24;
+            color: #e0e0e0;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Estilos para el botón de scroll to top */
+        #scrollToTopBtn {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translateY(100px);
+            opacity: 0;
+            z-index: 50;
+        }
+        #scrollToTopBtn.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Estilos para el switch de modo día/noche */
+        .theme-switch {
+            display: inline-block;
+            height: 24px;
+            position: relative;
+            width: 48px;
+        }
+        .theme-switch input {
+            display:none;
+        }
+        .slider {
+            background-color: #4b5563;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            background-color: #fff;
+            bottom: 4px;
+            content: "";
+            height: 16px;
+            left: 4px;
+            position: absolute;
+            transition: .4s;
+            width: 16px;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #ffbade;
+        }
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        /* Estilos para las tarjetas de manga (versión original V7) */
+        .manga-card-hover-content {
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+        .group:hover .manga-card-hover-content {
+            opacity: 1;
+        }
+        .add-to-list-options {
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            transform: translateY(10px);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .add-to-list-btn:hover .add-to-list-options {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Tema de Día */
+        .day-mode {
+            background-color: #f3f4f6;
+            color: #111827;
+        }
+        .day-mode nav, 
+        .day-mode .sidebar-component,
+        .day-mode .card-component {
+            background-color: #ffffff;
+            border-color: #e5e7eb;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        }
+        .day-mode .text-white {
+             color: #111827 !important;
+        }
+         .day-mode .text-gray-300 {
+            color: #4b5563 !important;
+        }
+        .day-mode .text-gray-400 {
+            color: #6b7280 !important;
+        }
+        .day-mode .border-gray-700 {
+            border-color: #d1d5db !important;
+        }
+        .day-mode .bg-gray-700 {
+            background-color: #e5e7eb !important;
+        }
+         .day-mode input {
+            color: #111827 !important;
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <!-- =========== NAVBAR =========== -->
+    <nav class="bg-[#201f31] shadow-lg sticky top-0 z-50">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 text-2xl font-bold text-white">
+                        Manga<span class="text-[#ffbade]">List</span>
+                    </div>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <a href="#" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Explorar</a>
+                            <a href="#" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Géneros</a>
+                            <a href="#" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Nuevos</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                     <input type="text" placeholder="Buscar manga..." class="bg-gray-700 text-white rounded-full px-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ffbade] hidden sm:block">
+                     <!-- Switch de Tema -->
+                     <label id="theme-switch-container" class="theme-switch">
+                        <input type="checkbox" id="theme-toggle">
+                        <span class="slider"></span>
+                     </label>
+                     <!-- Contenedor de Login/Avatar -->
+                     <div id="user-section">
+                        <button id="login-btn" class="text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors">Login</button>
+                        <img id="user-avatar" src="https://placehold.co/32x32/7c3aed/ffffff?text=U" class="w-8 h-8 rounded-full cursor-pointer hidden" alt="User Avatar">
+                     </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- =========== CONTENEDOR PRINCIPAL =========== -->
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col lg:flex-row gap-8">
+
+            <!-- =========== ÁREA PRINCIPAL DE CONTENIDO (75%) =========== -->
+            <main class="w-full lg:w-3/4 space-y-12">
+
+                <!-- Fila 1: Populares (GRID) -->
+                <section>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                        <div class="flex items-center space-x-2 border border-gray-700 rounded-full p-1">
+                            <button class="bg-[#ffbade] text-black px-4 py-1.5 rounded-full text-sm font-semibold">Populares</button>
+                            <button class="text-gray-300 hover:bg-gray-700/50 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors">P. Seinen</button>
+                            <button class="text-gray-300 hover:bg-gray-700/50 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors">P. Josei</button>
+                        </div>
+                        <a href="#" class="text-sm text-gray-400 hover:text-[#ffbade] transition-colors self-end sm:self-center">Ver más &rarr;</a>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-6">
+                        
+                        <!-- Card Template Modificada -->
+                        <div>
+                            <div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md overflow-hidden mb-2 group">
+                                <img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Popular+1" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                                <span class="absolute top-2 left-2 bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs font-semibold z-10">Manhwa</span>
+                                <div class="absolute bottom-0 left-0 right-0 bg-purple-500/80 backdrop-blur-sm py-1 text-center z-10">
+                                    <span class="text-white text-xs font-semibold">Shounen</span>
+                                </div>
+                            </div>
+                            <h3 class="font-semibold text-white text-sm truncate">Título del Manga</h3>
+                        </div>
+                        <!-- Fin Card Template Modificada -->
+
+                        <!-- Resto de las tarjetas (estilo original V7) -->
+                         <div class="group relative">
+                            <div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md overflow-hidden">
+                                <img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Popular+2" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110">
+                                <div class="absolute inset-0 bg-black/70 manga-card-hover-content p-3 flex flex-col justify-end">
+                                    <h3 class="font-bold text-white text-base">Título del Manga 2</h3>
+                                    <div class="flex flex-wrap gap-1.5 mt-2 text-xs">
+                                        <span class="bg-green-500 text-white px-2 py-0.5 rounded-full">Manga</span>
+                                    </div>
+                                    <div class="relative add-to-list-btn mt-3">
+                                        <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 rounded-md text-sm font-semibold">Agregar</button>
+                                        <div class="add-to-list-options absolute bottom-full mb-2 w-full bg-[#201f31] rounded-md shadow-lg flex flex-col text-sm">
+                                            <a href="#" class="px-3 py-1.5 hover:bg-gray-700/50">Favoritos</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="group relative"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Popular+3" class="w-full h-full object-cover"></div></div>
+                        <div class="group relative"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Popular+4" class="w-full h-full object-cover"></div></div>
+                        <div class="group relative"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Popular+5" class="w-full h-full object-cover"></div></div>
+                        <div class="group relative"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Popular+6" class="w-full h-full object-cover"></div></div>
+                        <div class="group relative"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Popular+7" class="w-full h-full object-cover"></div></div>
+                        <div class="group relative"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Popular+8" class="w-full h-full object-cover"></div></div>
+                        <div class="group relative"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Popular+9" class="w-full h-full object-cover"></div></div>
+                        <div class="group relative"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Popular+10" class="w-full h-full object-cover"></div></div>
+                        <div class="group relative"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Popular+11" class="w-full h-full object-cover"></div></div>
+                        <div class="group relative"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Popular+12" class="w-full h-full object-cover"></div></div>
+                    </div>
+                </section>
+                
+                <!-- Resto de las filas se mantienen igual -->
+                 <section>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                         <div class="flex items-center space-x-2 border border-gray-700 rounded-full p-1">
+                            <button class="bg-[#ffbade] text-black px-4 py-1.5 rounded-full text-sm font-semibold">Trending</button>
+                            <button class="text-gray-300 hover:bg-gray-700/50 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors">T. Seinen</button>
+                            <button class="text-gray-300 hover:bg-gray-700/50 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors">T. Josei</button>
+                        </div>
+                        <a href="#" class="text-sm text-gray-400 hover:text-[#ffbade] transition-colors self-end sm:self-center">Ver más &rarr;</a>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-6">
+                        <!-- 12 Tarjetas del Grid -->
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Trending+1" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Título del Manga</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Trending+2" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Otro Título</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Trending+3" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Manga Seinen</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Trending+4" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Manga Josei</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Trending+5" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Aventura Épica</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Trending+6" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Nuevo Isekai</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Trending+7" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Romance Escolar</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Trending+8" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">...</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Trending+9" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">...</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Trending+10" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">...</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Trending+11" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">...</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Trending+12" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">...</h3></div>
+                    </div>
+                </section>
+                <section>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                        <div class="flex items-center space-x-2 border border-gray-700 rounded-full p-1">
+                            <button class="bg-[#ffbade] text-black px-4 py-1.5 rounded-full text-sm font-semibold">Últimas Subidas</button>
+                            <button class="text-gray-300 hover:bg-gray-700/50 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors">Últimos Añadidos</button>
+                        </div>
+                        <a href="#" class="text-sm text-gray-400 hover:text-[#ffbade] transition-colors self-end sm:self-center">Ver más &rarr;</a>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-6">
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Nuevo+1" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Título del Manga</h3><p class="text-xs text-gray-500">Capítulo 88</p></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Nuevo+2" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Otro Título</h3><p class="text-xs text-gray-500">Capítulo 32</p></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Nuevo+3" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Manga Seinen</h3><p class="text-xs text-gray-500">Capítulo 5</p></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Nuevo+4" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Manga Josei</h3><p class="text-xs text-gray-500">Capítulo 150</p></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Nuevo+5" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Aventura Épica</h3><p class="text-xs text-gray-500">Capítulo 2</p></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Nuevo+6" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Nuevo Isekai</h3><p class="text-xs text-gray-500">Capítulo 44</p></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Nuevo+7" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">Romance Escolar</h3><p class="text-xs text-gray-500">Capítulo 91</p></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Nuevo+8" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">...</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Nuevo+9" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">...</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Nuevo+10" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">...</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Nuevo+11" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">...</h3></div>
+                        <div class="group"><div class="relative aspect-[2/3] bg-[#2a2c3a] rounded-md mb-2"><img src="https://placehold.co/200x300/2a2c3a/e0e0e0?text=Nuevo+12" class="w-full h-full object-cover"></div><h3 class="font-medium text-gray-300 text-sm truncate">...</h3></div>
+                    </div>
+                </section>
+            </main>
+
+            <!-- =========== BARRA LATERAL (25%) =========== -->
+            <aside class="w-full lg:w-1/4 lg:sticky top-20 self-start space-y-8">
+                
+                <!-- COMPONENTE: RankingList -->
+                <div class="sidebar-component bg-[#201f31] p-4 rounded-lg shadow-lg">
+                    <div class="mb-4">
+                        <div id="ranking-tabs" class="flex border-b border-gray-700">
+                            <button class="ranking-tab flex-1 py-2 text-sm font-semibold text-white border-b-2 border-[#ffbade]">Diario</button>
+                            <button class="ranking-tab flex-1 py-2 text-sm font-semibold text-gray-400 hover:text-white transition-colors">Semanal</button>
+                            <button class="ranking-tab flex-1 py-2 text-sm font-semibold text-gray-400 hover:text-white transition-colors">Mensual</button>
+                        </div>
+                    </div>
+                    <ol class="space-y-3" id="ranking-list">
+                        <!-- Primeros 5 Items (visibles por defecto) -->
+                        <li class="flex items-center space-x-3 group"><span class="text-lg font-bold text-[#ffbade] w-8 text-center">1</span><img src="https://placehold.co/50x75/2a2c3a/e0e0e0" alt="Manga Cover" class="w-10 h-14 object-cover rounded"><div><h4 class="font-semibold text-sm text-white group-hover:text-[#ffbade] cursor-pointer truncate">Solo Leveling</h4><p class="text-xs text-gray-400">Action, Fantasy</p></div></li>
+                        <li class="flex items-center space-x-3 group"><span class="text-lg font-bold text-gray-400 w-8 text-center">2</span><div class="w-10 h-14 bg-[#2a2c3a] rounded flex-shrink-0"></div><div><h4 class="font-semibold text-sm text-white group-hover:text-[#ffbade] cursor-pointer truncate">Vagabond</h4><p class="text-xs text-gray-400">Action, Adventure</p></div></li>
+                        <li class="flex items-center space-x-3 group"><span class="text-lg font-bold text-gray-400 w-8 text-center">3</span><div class="w-10 h-14 bg-[#2a2c3a] rounded flex-shrink-0"></div><div><h4 class="font-semibold text-sm text-white group-hover:text-[#ffbade] cursor-pointer truncate">Kingdom</h4><p class="text-xs text-gray-400">Action, Drama</p></div></li>
+                        <li class="flex items-center space-x-3 group"><span class="text-base font-bold text-gray-500 w-8 text-center">4</span><div class="w-10 h-14 bg-[#2a2c3a] rounded flex-shrink-0"></div><div><h4 class="font-semibold text-sm text-white truncate">...</h4></div></li>
+                        <li class="flex items-center space-x-3 group"><span class="text-base font-bold text-gray-500 w-8 text-center">5</span><div class="w-10 h-14 bg-[#2a2c3a] rounded flex-shrink-0"></div><div><h4 class="font-semibold text-sm text-white truncate">...</h4></div></li>
+                        
+                        <!-- Botón para mostrar más -->
+                        <li id="show-more-ranking" class="pt-2 cursor-pointer text-center text-gray-400 hover:text-white">
+                            <span class="text-2xl tracking-widest">...</span>
+                        </li>
+
+                        <!-- Items restantes (ocultos por defecto) -->
+                        <li class="flex items-center space-x-3 group hidden ranking-more"><span class="text-base font-bold text-gray-500 w-8 text-center">6</span><div class="w-10 h-14 bg-[#2a2c3a] rounded flex-shrink-0"></div><div><h4 class="font-semibold text-sm text-white truncate">...</h4></div></li>
+                        <li class="flex items-center space-x-3 group hidden ranking-more"><span class="text-base font-bold text-gray-500 w-8 text-center">7</span><div class="w-10 h-14 bg-[#2a2c3a] rounded flex-shrink-0"></div><div><h4 class="font-semibold text-sm text-white truncate">...</h4></div></li>
+                        <li class="flex items-center space-x-3 group hidden ranking-more"><span class="text-base font-bold text-gray-500 w-8 text-center">8</span><div class="w-10 h-14 bg-[#2a2c3a] rounded flex-shrink-0"></div><div><h4 class="font-semibold text-sm text-white truncate">...</h4></div></li>
+                        <li class="flex items-center space-x-3 group hidden ranking-more"><span class="text-base font-bold text-gray-500 w-8 text-center">9</span><div class="w-10 h-14 bg-[#2a2c3a] rounded flex-shrink-0"></div><div><h4 class="font-semibold text-sm text-white truncate">...</h4></div></li>
+                        <li class="flex items-center space-x-3 group hidden ranking-more"><span class="text-base font-bold text-gray-500 w-8 text-center">10</span><div class="w-10 h-14 bg-[#2a2c3a] rounded flex-shrink-0"></div><div><h4 class="font-semibold text-sm text-white truncate">...</h4></div></li>
+                    </ol>
+                </div>
+
+                <!-- COMPONENTE: ChatBox -->
+                <div class="sidebar-component bg-[#201f31] rounded-lg shadow-lg">
+                    <h3 class="text-lg font-semibold p-4 border-b border-gray-700">Chat Global</h3>
+                    <div class="p-4 h-64 overflow-y-auto space-y-3 text-sm no-scrollbar">
+                        <p><span class="font-semibold text-cyan-400">User123:</span> ¡El último cap de One Piece estuvo increíble!</p>
+                        <p><span class="font-semibold text-amber-400">MangaFan:</span> Totalmente, no me esperaba ese giro.</p>
+                        <p><span class="font-semibold text-rose-400">Admin:</span> Recuerden no hacer spoilers de capítulos muy recientes.</p>
+                    </div>
+                    <div class="p-4 border-t border-gray-700">
+                        <input type="text" placeholder="Escribe un mensaje..." class="w-full bg-gray-700 text-white rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#ffbade]">
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Botón para Scrollear Arriba -->
+    <button id="scrollToTopBtn" class="fixed bottom-5 left-5 bg-[#ffbade] text-black w-12 h-12 rounded-full shadow-lg flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+        </svg>
+    </button>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Lógica para el botón "mostrar más" del ranking ---
+            const showMoreButton = document.getElementById('show-more-ranking');
+            const hiddenItems = document.querySelectorAll('.ranking-more');
+            if(showMoreButton) {
+                showMoreButton.addEventListener('click', () => {
+                    hiddenItems.forEach(item => {
+                        item.classList.remove('hidden');
+                    });
+                    showMoreButton.classList.add('hidden');
+                });
+            }
+
+            // --- Lógica para el botón de Scroll to Top ---
+            const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+            if(scrollToTopBtn) {
+                window.addEventListener('scroll', () => {
+                    if (window.scrollY > window.innerHeight / 2) { 
+                        scrollToTopBtn.classList.add('visible');
+                    } else {
+                        scrollToTopBtn.classList.remove('visible');
+                    }
+                });
+
+                scrollToTopBtn.addEventListener('click', () => {
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                });
+            }
+
+            // --- Lógica para las pestañas del ranking ---
+            const rankingTabs = document.querySelectorAll('.ranking-tab');
+            if(rankingTabs.length > 0) {
+                rankingTabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        rankingTabs.forEach(t => {
+                            t.classList.remove('text-white', 'border-[#ffbade]');
+                            t.classList.add('text-gray-400');
+                        });
+                        tab.classList.remove('text-gray-400');
+                        tab.classList.add('text-white', 'border-[#ffbade]');
+                    });
+                });
+            }
+            
+            // --- Lógica para Login / Avatar ---
+            const loginBtn = document.getElementById('login-btn');
+            const userAvatar = document.getElementById('user-avatar');
+            if(loginBtn && userAvatar) {
+                loginBtn.addEventListener('click', () => {
+                    loginBtn.classList.add('hidden');
+                    userAvatar.classList.remove('hidden');
+                });
+            }
+
+            // --- Lógica para el switch de tema ---
+            const themeToggle = document.getElementById('theme-toggle');
+            if(themeToggle) {
+                themeToggle.addEventListener('change', () => {
+                    document.body.classList.toggle('day-mode');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+
