@@ -1,56 +1,96 @@
-// src/components/layout/Navbar.tsx
-
 "use client";
-
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { FiUpload } from "react-icons/fi";
-import logo from "@/assets/logo.png";
-import UserMenu from "./UserMenu"; // <-- 1. Importa el nuevo componente
+import React, { useState, useEffect } from 'react';
 
 const Navbar = () => {
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isDayMode, setIsDayMode] = useState(false);
 
-  // Lógica para cerrar el menú al hacer clic fuera
+  // Efecto para añadir/quitar la clase 'day-mode' del body
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setIsUserMenuOpen(false);
-      }
+    document.body.classList.toggle('day-mode', isDayMode);
+  }, [isDayMode]);
+
+  // --- Clases dinámicas basadas en el estado del tema ---
+
+  // Clases para el fondo de la barra de navegación
+  const navClasses = `
+    shadow-lg sticky top-0 z-50
+    ${isDayMode ? 'bg-white' : 'bg-[#201f31]'}
+  `;
+
+  // Clases para el texto del logo
+  const brandClasses = `
+    flex-shrink-0 text-2xl font-bold
+    ${isDayMode ? 'text-gray-900' : 'text-white'}
+  `;
+
+  // Clases para los enlaces de navegación (incluyendo el hover)
+  // Esta es la corrección clave
+  const linkClasses = `
+    px-3 py-2 rounded-md text-sm font-medium transition-colors
+    ${isDayMode 
+      ? 'text-gray-500 hover:bg-gray-200 hover:text-gray-900' // Estilos para modo día
+      : 'text-gray-300 hover:bg-gray-700 hover:text-white'   // Estilos para modo noche
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [userMenuRef]);
+  `;
 
   return (
-    <nav className="relative top-0 left-0 w-full h-[75px] z-[9999] flex justify-center sm:justify-around items-center bg-graynav shadow-lg text-txnav">
-      <div>
-        <Link href="/">
-          <Image alt="logo" width={56} height={56} src={logo} />
-        </Link>
-      </div>
+    <nav className={navClasses}>
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          
+          <div className="flex items-center">
+            <div className={brandClasses}>
+              Manga<span className="text-[#ffbade]">List</span>
+            </div>
+            <div className="hidden md:block">
+              <div className="ml-10 flex items-baseline space-x-4">
+                <a href="#" className={linkClasses}>Explorar</a>
+                <a href="#" className={linkClasses}>Géneros</a>
+                <a href="#" className={linkClasses}>Nuevos</a>
+                <a href="#" className={linkClasses}>Sorpréndeme!</a>
+              </div>
+            </div>
+          </div>
 
-      <div className="flex justify-center items-center gap-4">
-        {/* Contenedor del menú de usuario */}
-        <div ref={userMenuRef} className="relative">
-          <span
-            className="cursor-pointer hover:text-hovnav"
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-          >
-            Login
-          </span>
-
-          {/* 2. Renderiza el menú condicionalmente */}
-          {isUserMenuOpen && <UserMenu />}
+          <div className="flex items-center gap-4">
+            <input 
+              type="text" 
+              placeholder="Buscar manga..." 
+              className={`
+                rounded-full px-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ffbade] hidden sm:block
+                ${isDayMode ? 'bg-gray-200 text-gray-900' : 'bg-gray-700 text-white'}
+              `}
+            />
+            
+            <label className="theme-switch">
+              <input 
+                type="checkbox" 
+                checked={isDayMode}
+                onChange={() => setIsDayMode(!isDayMode)}
+              />
+              <span className="slider"></span>
+            </label>
+            
+            <div>
+              {isLoggedIn ? (
+                <img 
+                  src="https://placehold.co/32x32/7c3aed/ffffff?text=U" 
+                  className="w-8 h-8 rounded-full cursor-pointer" 
+                  alt="User Avatar"
+                  onClick={() => setIsLoggedIn(false)}
+                />
+              ) : (
+                <button 
+                  onClick={() => setIsLoggedIn(true)} 
+                  className="text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors"
+                >
+                  Login
+                </button>
+              )}
+            </div>
+          </div>
         </div>
-
-        <button className="transition ease-in-out delay-150 hover:scale-105 duration-300 px-2 sm:px-4 py-2 bg-royal hover:bg-blue-50 hover:shadow-filterblue active:bg-blue-50 rounded-md text-white cursor-pointer flex items-center gap-1">
-          <FiUpload size={20} />
-        </button>
       </div>
     </nav>
   );

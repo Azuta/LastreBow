@@ -1,31 +1,37 @@
 "use client";
-import { useEffect, useState } from "react"; // <-- 1. Importa useState
+import { useEffect, useState } from "react";
 import { fetchMediaRows, fetchMediaById } from "@/services/fetchAniList";
 import Navbar from "@/components/layout/Navbar";
-import SliderMediaContainer from "@/components/shared/SliderMediaContainer";
-import { Media } from "@/types/AniListResponse"; // Importamos el tipo para el estado
+// Importamos el nuevo componente para las secciones de cuadrícula
+import MangaSection from "@/components/shared/MangaSection";
+import { Media } from "@/types/AniListResponse";
+import RankingList from '@/components/sidebar/RankingList'; // <-- 1. Importa el Ranking
+import ChatBox from '@/components/sidebar/ChatBox';       // <-- 2. Importa el Chat
 
 const Home = () => {
-  // 2. Creamos un estado para guardar los datos de la API
-  const [mediaRows, setMediaRows] = useState<{ title: string; data: Media[] }[]>([]);
+  const [mediaRows, setMediaRows] = useState<
+    { title: string; data: Media[] }[]
+  >([]);
+  // Añadimos un estado de carga para una mejor experiencia de usuario
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const testApi = async () => {
       console.log("🚀 Probando la API...");
+      setIsLoading(true); // Inicia la carga
       try {
         console.log("Fetching media rows...");
-        const fetchedMediaRows = await fetchMediaRows(); // La llamamos 'fetchedMediaRows' para no confundir
+        const fetchedMediaRows = await fetchMediaRows();
         console.log("✅ Resultado de fetchMediaRows:", fetchedMediaRows);
-
-        // 3. Guardamos los datos en el estado para que el return los pueda usar
         setMediaRows(fetchedMediaRows);
 
-        // --- La prueba para fetchMediaById puede seguir igual ---
         console.log("Fetching media by ID (1535)...");
         const mediaById = await fetchMediaById(1535);
         console.log("✅ Resultado de fetchMediaById:", mediaById);
       } catch (error) {
         console.error("❌ Error probando la API:", error);
+      } finally {
+        setIsLoading(false); // Termina la carga
       }
     };
 
@@ -35,14 +41,32 @@ const Home = () => {
   return (
     <>
       <Navbar />
-      <div className="pt-[10px]">
-        {/* 4. Ahora esto funciona, pero solo si 'mediaRows' no está vacío */}
-        {mediaRows.length > 0 ? (
-          <SliderMediaContainer title="Trending" media={mediaRows[0].data} />
-        ) : (
-          <p>Loading media...</p> // Mostramos un mensaje de carga
-        )}
-        <h1>Revisa la consola del navegador para ver los resultados de la API</h1>
+      {/* Contenedor principal que coincide con el layout del HTML */}
+      <div className="max-w-screen-3xl px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* ÁREA PRINCIPAL DE CONTENIDO */}
+          <main className="w-full lg:w-4/4 space-y-12">
+            {isLoading ? (
+              <p className="text-white text-center">Cargando...</p>
+            ) : (
+              // Mapeamos los datos de la API para crear una sección por cada categoría
+              mediaRows.map((row) => (
+                <MangaSection
+                  key={row.title}
+                  title={row.title}
+                  media={row.data}
+                />
+              ))
+            )}
+          </main>
+
+          {/* BARRA LATERAL (para completar después) */}
+          <aside className="w-full lg:w-1/4 lg:sticky top-20 self-start space-y-8">
+            {/* Aquí irán los componentes de Ranking y Chat */}
+            <RankingList />
+            <ChatBox />
+          </aside>
+        </div>
       </div>
     </>
   );

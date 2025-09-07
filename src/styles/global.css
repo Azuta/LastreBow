@@ -1,18 +1,40 @@
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
-
-/* Cargar Poppins desde Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
 
 body {
-    background: #201f31;
-    font-family: 'Poppins', Arial, sans-serif;
-    font-size: 16px;
-    line-height: 1.5em;
-    font-weight: 300;
-    padding: 0;
-    margin: 0;
-    -webkit-text-size-adjust: none;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    background-color: #1a1a24;
 }
 
+.day-mode {
+    background-color: #f3f4f6;
+}
+
+/* Estilos del switch que no usan Tailwind */
+.theme-switch {
+    display: inline-block;
+    height: 24px;
+    position: relative;
+    width: 48px;
+}
+.theme-switch input { display: none; }
+.slider {
+    background-color: #4b5563;
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    transition: .4s;
+    border-radius: 24px;
+}
+.slider:before {
+    background-color: #fff;
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    transition: .4s;
+    border-radius: 50%;
+}
+input:checked + .slider { background-color: #ffbade; }
+input:checked + .slider:before { transform: translateX(24px); }

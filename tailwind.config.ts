@@ -1,4 +1,3 @@
-import { Roboto } from "next/font/google";
 import type { Config } from "tailwindcss";
 
 const config: Config = {
@@ -49,6 +48,7 @@ const config: Config = {
       "sectioncircle" : "#d9e6ff",
       "chevroncol" : "#ADC0D2" ,
       "bgsection": "#FAFAFA",
+      "manga-pink": "#ffbade",
     },
     extend: {
       boxShadow: {
