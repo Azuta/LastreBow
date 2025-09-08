@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import { Media } from '@/types/AniListResponse';
+import Link from 'next/link';
 
 interface MangaCardProps {
   media: Media;
@@ -30,6 +31,7 @@ const MangaCard = ({ media}: MangaCardProps) => {
   };
 
   return (
+    <Link href={`/media/${media.id}`} className="block">
     <div className="relative aspect-[2/3] w-full rounded-md overflow-hidden group text-white">
       {/* Imagen de fondo */}
       <img
@@ -62,6 +64,7 @@ const MangaCard = ({ media}: MangaCardProps) => {
         </div>
       </div>
     </div>
+    </Link>
   );
 };
 export default MangaCard;

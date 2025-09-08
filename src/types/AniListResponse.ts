@@ -1,5 +1,32 @@
-// src/types/index.ts
+// src/types/AniListResponse.ts
 
+// --- NUEVOS TIPOS AÑADIDOS ---
+export interface Staff {
+  id: number;
+  name: string;
+  role: string;
+  image: string;
+}
+
+export interface Character {
+  id: number;
+  name: string;
+  role: 'MAIN' | 'SUPPORTING' | 'BACKGROUND';
+  image: string;
+}
+
+export interface Relation {
+  id: number;
+  relationType: 'PREQUEL' | 'SEQUEL' | 'ADAPTATION' | 'SIDE_STORY' | 'SPIN_OFF';
+  media: Media;
+}
+
+export interface Recommendation {
+    id: number;
+    media: Media;
+}
+
+// --- TIPO PRINCIPAL ACTUALIZADO ---
 export interface Media {
   id: number;
   title: {
@@ -11,7 +38,7 @@ export interface Media {
     extraLarge: string;
     large: string;
     medium: string;
-    color: string | null; // Color también puede ser nulo
+    color: string | null;
   };
   bannerImage: string | null;
   description: string;
@@ -23,27 +50,23 @@ export interface Media {
   status: 'RELEASING' | 'FINISHED' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS';
   format: string;
   type: 'ANIME' | 'MANGA';
-
-  // 👇 --- CAMPOS CORREGIDOS (HECHOS OPCIONALES) --- 👇
+  
+  // --- NUEVOS CAMPOS OPCIONALES ---
+  staff?: Staff[];
+  characters?: Character[];
+  relations?: Relation[];
+  recommendations?: Recommendation[];
+  trailer?: {
+    id: string; // ID del video de YouTube
+    site: string;
+  } | null;
+  
   meanScore?: number;
   favourites?: number;
-  startDate?: {
-    year: number | null;
-    month: number | null;
-    day: number | null;
-  };
-  endDate?: {
-    year: number | null;
-    month: number | null;
-    day: number | null;
-  };
+  startDate?: { year: number | null; month: number | null; day: number | null; };
+  endDate?: { year: number | null; month: number | null; day: number | null; };
   season?: 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL' | null;
   seasonYear?: number | null;
-  trailer?: {
-    id: string;
-    site: string;
-    thumbnail: string;
-  } | null;
 }
 
 export interface PageInfo {

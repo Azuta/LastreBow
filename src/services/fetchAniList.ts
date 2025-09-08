@@ -1,15 +1,11 @@
-// src/services/anilist.ts
+// src/services/fetchAniList.ts
 
 import { Media } from "@/types/AniListResponse";
-import { mockMediaRows, mockMediaById, dailyRankingMock, weeklyRankingMock, monthlyRankingMock } from "@/mock/mediaData";
+import { mockMediaRows, mockMediaById } from "@/mock/mediaData";
 
-// #################################################################
-// ESTA ES LA ÚNICA FUNCIÓN QUE CAMBIA
-// #################################################################
-
-// La función genérica ahora llama a NUESTRA API, no a la de AniList
+// La función genérica que se comunica con nuestra propia API interna.
+// En un futuro, esta sería la única función que realmente hace una llamada de red.
 const fetchFromOurAPI = async <T = any>(query: string, variables: object = {}): Promise<T> => {
-  //                                     👇 La llamada ahora es a nuestra API interna
   const res = await fetch('/api/anilist', { 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -26,10 +22,7 @@ const fetchFromOurAPI = async <T = any>(query: string, variables: object = {}): 
 };
 
 
-// #################################################################
-// ESTAS FUNCIONES NO NECESITAN CAMBIAR NADA
-// #################################################################
-
+// Fragmento de GraphQL para reutilizar campos comunes en las consultas de Media.
 const mediaFragment = `
   fragment media on Media {
     id
@@ -57,105 +50,70 @@ const mediaFragment = `
   }
 `;
 
+/**
+ * Obtiene las filas de mangas para la página principal (Trending, Popular, etc.).
+ * Actualmente, devuelve datos de prueba.
+ */
 export const fetchMediaRows = async (): Promise<{ title: string; data: Media[] }[]> => {
-   if (process.env.NODE_ENV === 'development') {
-    console.log("⚡️ Usando datos de prueba (Mock Data) para Media Rows");
-    // Retorna los datos de prueba directamente, simulando una llamada a la API
+    console.log("⚡️ Usando datos de prueba (Mock Data) para las filas de la página principal.");
     return Promise.resolve(mockMediaRows);
-  } else {
-
-  const trendingQuery = /* ... (tu query de trending) ... */ `
-    query ($page: Int, $perPage: Int) {
-      Page(page: $page, perPage: $perPage) {
-        media(sort: TRENDING_DESC, type: MANGA) {
-          ...media
-        }
-      }
-    }
-    ${mediaFragment}
-  `;
-  const popularQuery = /* ... (tu query de popularidad) ... */ `
-    query ($page: Int, $perPage: Int) {
-      Page(page: $page, perPage: $perPage) {
-        media(sort: POPULARITY_DESC, type: MANGA) {
-          ...media
-        }
-      }
-    }
-    ${mediaFragment}
-  `;
-  const favoritesQuery = /* ... (tu query de favoritos) ... */ `
-    query ($page: Int, $perPage: Int) {
-      Page(page: $page, perPage: $perPage) {
-        media(sort: FAVOURITES_DESC, type: MANGA) {
-          ...media
-        }
-      }
-    }
-    ${mediaFragment}
-  `;
-
-  const variables = { page: 1, perPage: 10 };
-
-  const [trendingData, popularData, favoritesData] = await Promise.all([
-    fetchFromOurAPI<{ Page: { media: Media[] } }>(trendingQuery, variables),
-    fetchFromOurAPI<{ Page: { media: Media[] } }>(popularQuery, variables),
-    fetchFromOurAPI<{ Page: { media: Media[] } }>(favoritesQuery, variables),
-  ]);
-
-  return [
-    { title: "Trending", data: trendingData.Page.media },
-    { title: "Popular", data: popularData.Page.media },
-    { title: "Most Favorited", data: favoritesData.Page.media },
-  ];
-  }
 };
 
+/**
+ * Obtiene los detalles completos de un manga específico por su ID.
+ * Actualmente, devuelve un objeto de prueba detallado.
+ * @param id - El ID del manga a buscar.
+ */
 export const fetchMediaById = async (id: number): Promise<Media> => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`⚡️ Usando datos de prueba (Mock Data) para Media ID: ${id}`);
-    return Promise.resolve(mockMediaById);
-  } else {
-
-  const query = `
-    query ($id: Int) {
-      Media(id: $id) {
-        ...media
-      }
-    }
-    ${mediaFragment}
-  `;
-  const variables = { id };
-  const data = await fetchFromOurAPI<{ Media: Media }>(query, variables);
-  return data.Media;
-  }
+  console.log(`⚡️ Usando datos de prueba (Mock Data) para Media ID: ${id}`);
+  // Devolvemos el mock detallado que incluye staff, personajes, etc.
+  return Promise.resolve(mockMediaById);
 };
 
-// --- NUEVA FUNCIÓN AÑADIDA ---
-// Simula la obtención de todos los mangas para una categoría y género específicos.
+/**
+ * Simula la obtención de mangas filtrados por una categoría y un género.
+ * @param category - La categoría (ej. 'trending', 'popular').
+ * @param genre - El género (ej. 'Action', 'all').
+ */
 export const fetchAllMediaByCategoryAndGenre = async (category: string, genre: string): Promise<Media[]> => {
   console.log(`⚡️ Usando Mocks para Categoria: ${category}, Genero: ${genre}`);
   
-  // En una aplicación real, aquí harías una llamada a la API con paginación y filtros.
-  // Por ahora, usamos los datos de prueba del ranking y los filtramos.
-  let sourceData: Media[] = [];
-  
-  // Elegimos una lista grande de mangas para simular
-  if (category.toLowerCase() === 'popular') {
-    sourceData = weeklyRankingMock;
-  } else if (category.toLowerCase() === 'trending') {
-      sourceData = dailyRankingMock;
-  } else {
-    sourceData = monthlyRankingMock;
-  }
-  
-  // Si el género no es 'all', filtramos por ese género.
+  // Usamos los datos de las filas como nuestra fuente principal
+  const sourceData = mockMediaRows.flatMap(row => row.data);
+
   if (genre !== 'all') {
     return sourceData.filter(manga => 
       manga.genres.some(g => g.toLowerCase() === genre.toLowerCase())
     );
   }
+  
+  // Devolvemos una versión sin duplicados si el género es 'all'
+  const uniqueMedia = sourceData.reduce((acc, current) => {
+    if (!acc.find(item => item.id === current.id)) {
+      acc.push(current);
+    }
+    return acc;
+  }, [] as Media[]);
 
-  // Si es 'all', devolvemos la lista completa.
-  return sourceData;
+  return Promise.resolve(uniqueMedia);
+};
+
+/**
+ * Simula la obtención de TODOS los mangas disponibles para la página de exploración general.
+ */
+export const fetchAllMedia = async (): Promise<Media[]> => {
+  console.log("⚡️ Usando Mocks para obtener todos los mangas para la página de Explorar.");
+
+  // Combinamos todos los datos de las filas de la página principal en un solo array
+  const allMockMedia = mockMediaRows.flatMap(row => row.data);
+
+  // Eliminamos duplicados basados en el ID del manga para tener una lista limpia
+  const uniqueMedia = allMockMedia.reduce((acc, current) => {
+    if (!acc.find(item => item.id === current.id)) {
+      acc.push(current);
+    }
+    return acc;
+  }, [] as Media[]);
+
+  return Promise.resolve(uniqueMedia);
 };
