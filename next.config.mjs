@@ -7,6 +7,10 @@ const nextConfig = {
           protocol: "https",
           hostname: "media.kitsu.app",
         },
+        {
+          protocol: "https",
+          hostname: "i.pravatar.cc",
+        },
       ],
     },
 };

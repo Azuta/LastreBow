@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import RootProviders from "@/components/container/RootProvider";
 import { MediaProvider } from "@/context/MediaContext";
-// 1. Importa el nuevo proveedor de preferencias
 import { UserPreferencesProvider } from "@/context/UserPreferencesContext"; 
+import { AuthProvider } from "@/context/AuthContext"; // <-- Importa el AuthProvider
 import { Poppins } from "next/font/google";
 import "@/styles/global.css"
 
@@ -25,12 +25,14 @@ export default function RootLayout({
     <html lang="en">
       <body className={poppins.className}>
         <RootProviders>
-          <MediaProvider>
-            {/* 2. Envuelve a los hijos con el proveedor */}
-            <UserPreferencesProvider>
-              {children}
-            </UserPreferencesProvider>
-          </MediaProvider>
+          {/* Envuelve los proveedores existentes con AuthProvider */}
+          <AuthProvider>
+            <MediaProvider>
+              <UserPreferencesProvider>
+                {children}
+              </UserPreferencesProvider>
+            </MediaProvider>
+          </AuthProvider>
         </RootProviders>
       </body>
     </html>

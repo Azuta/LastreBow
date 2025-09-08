@@ -26,6 +26,14 @@ export interface Recommendation {
     media: Media;
 }
 
+// --- NUEVO TIPO PARA CAPÍTULOS ---
+export interface Chapter {
+  id: string; // Ej: "150.5"
+  title: string;
+  uploadedAt: string;
+  scanGroup: string;
+}
+
 // --- TIPO PRINCIPAL ACTUALIZADO ---
 export interface Media {
   id: number;
@@ -51,22 +59,17 @@ export interface Media {
   format: string;
   type: 'ANIME' | 'MANGA';
   
-  // --- NUEVOS CAMPOS OPCIONALES ---
+  // --- NUEVOS CAMPOS ---
   staff?: Staff[];
   characters?: Character[];
   relations?: Relation[];
   recommendations?: Recommendation[];
-  trailer?: {
-    id: string; // ID del video de YouTube
-    site: string;
-  } | null;
+  trailer?: { id: string; site: string; } | null;
   
-  meanScore?: number;
-  favourites?: number;
-  startDate?: { year: number | null; month: number | null; day: number | null; };
-  endDate?: { year: number | null; month: number | null; day: number | null; };
-  season?: 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL' | null;
-  seasonYear?: number | null;
+  // --- CAMPOS PARA LA NUEVA LÓGICA ---
+  chapterList?: Chapter[];
+  collaboratorsCount?: number; // Para la tarjeta de proyecto
+  scanGroupId?: string; // Para saber qué grupo trabaja en él
 }
 
 export interface PageInfo {

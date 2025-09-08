@@ -1,83 +1,71 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link'; // <--- 1. Importar Link
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import UserMenu from './UserMenu';
+import NotificationsPanel from './NotificationsPanel'; // <-- NUEVO
+import { useAuth } from '@/context/AuthContext';
+
+const BellIcon = ({ hasUnread }: { hasUnread: boolean }) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        {hasUnread && <circle cx="19" cy="5" r="3" fill="red" stroke="none" />}
+    </svg>
+);
 
 const Navbar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isLoggedIn, login, user } = useAuth();
   const [isDayMode, setIsDayMode] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false); // <-- NUEVO
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null); // <-- NUEVO
+
+  const hasUnreadNotifications = user?.notifications.some(n => !n.read) || false;
+
+  useEffect(() => { document.body.classList.toggle('day-mode', isDayMode); }, [isDayMode]);
 
   useEffect(() => {
-    document.body.classList.toggle('day-mode', isDayMode);
-  }, [isDayMode]);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenu.current && !userMenu.current.contains(event.target as Node)) setIsUserMenuOpen(false);
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) setIsNotificationsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  const navClasses = `
-    shadow-lg sticky top-0 z-50
-    ${isDayMode ? 'bg-white' : 'bg-[#201f31]'}
-  `;
-  const brandClasses = `
-    flex-shrink-0 text-2xl font-bold
-    ${isDayMode ? 'text-gray-900' : 'text-white'}
-  `;
-  const linkClasses = `
-    px-3 py-2 rounded-md text-sm font-medium transition-colors
-    ${isDayMode 
-      ? 'text-gray-500 hover:bg-gray-200 hover:text-gray-900'
-      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-    }
-  `;
+  const navClasses = `shadow-lg sticky top-0 z-50 ${isDayMode ? 'bg-white' : 'bg-[#201f31]'}`;
+  const brandClasses = `flex-shrink-0 text-2xl font-bold ${isDayMode ? 'text-gray-900' : 'text-white'}`;
+  const linkClasses = `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isDayMode ? 'text-gray-500 hover:bg-gray-200 hover:text-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`;
 
   return (
     <nav className={navClasses}>
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            <div className={brandClasses}>
-              Manga<span className="text-[#ffbade]">List</span>
-            </div>
-            <div className="hidden md:block">
-              <div className="ml-10 flex items-baseline space-x-4">
-                {/* --- 2. Cambiar <a> por <Link> y añadir la nueva ruta --- */}
-                <Link href="/browse/all" className={linkClasses}>Explorar</Link>
-                <a href="#" className={linkClasses}>Nuevos</a>
-                <a href="#" className={linkClasses}>Sorpréndeme!</a>
-                <a href="#" className={linkClasses}>Grupos!</a>
-              </div>
-            </div>
+            <Link href="/" className={brandClasses}>Manga<span className="text-[#ffbade]">List</span></Link>
+            <div className="hidden md:block"><div className="ml-10 flex items-baseline space-x-4"><Link href="/browse/all" className={linkClasses}>Explorar</Link><Link href="/groups" className={linkClasses}>Grupos</Link></div></div>
           </div>
           <div className="flex items-center gap-4">
-            <input 
-              type="text" 
-              placeholder="Buscar manga..." 
-              className={`
-                rounded-full px-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ffbade] hidden sm:block
-                ${isDayMode ? 'bg-gray-200 text-gray-900' : 'bg-gray-700 text-white'}
-              `}
-            />
-            <label className="theme-switch">
-              <input 
-                type="checkbox" 
-                checked={isDayMode}
-                onChange={() => setIsDayMode(!isDayMode)}
-              />
-              <span className="slider"></span>
-            </label>
-            <div>
-              {isLoggedIn ? (
-                <img 
-                  src="https://placehold.co/32x32/7c3aed/ffffff?text=U" 
-                  className="w-8 h-8 rounded-full cursor-pointer" 
-                  alt="User Avatar"
-                  onClick={() => setIsLoggedIn(false)}
-                />
-              ) : (
-                <button 
-                  onClick={() => setIsLoggedIn(true)} 
-                  className="text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors"
-                >
-                  Login
-                </button>
-              )}
-            </div>
+            <input type="text" placeholder="Buscar manga..." className={`rounded-full px-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ffbade] hidden sm:block ${isDayMode ? 'bg-gray-200 text-gray-900' : 'bg-gray-700 text-white'}`} />
+            <label className="theme-switch"><input type="checkbox" checked={isDayMode} onChange={() => setIsDayMode(!isDayMode)} /><span className="slider"></span></label>
+            
+            {isLoggedIn && user ? (
+                <>
+                    <div className="relative" ref={notificationsRef}>
+                        <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className="text-gray-300 hover:text-white p-2 rounded-full hover:bg-gray-700">
+                           <BellIcon hasUnread={hasUnreadNotifications} />
+                        </button>
+                        {isNotificationsOpen && <NotificationsPanel />}
+                    </div>
+                    <div className="relative" ref={userMenuRef}>
+                      <img src={user.avatarUrl} className="w-8 h-8 rounded-full cursor-pointer" alt="User Avatar" onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} />
+                      {isUserMenuOpen && <UserMenu />}
+                    </div>
+                </>
+            ) : (
+                <button onClick={() => login(user!)} className="text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors">Login</button>
+            )}
           </div>
         </div>
       </div>
