@@ -38,9 +38,9 @@ const Navbar = () => {
               <div className="ml-10 flex items-baseline space-x-4">
                 {/* --- 2. Cambiar <a> por <Link> y añadir la nueva ruta --- */}
                 <Link href="/browse/all" className={linkClasses}>Explorar</Link>
-                <a href="#" className={linkClasses}>Géneros</a>
                 <a href="#" className={linkClasses}>Nuevos</a>
                 <a href="#" className={linkClasses}>Sorpréndeme!</a>
+                <a href="#" className={linkClasses}>Grupos!</a>
               </div>
             </div>
           </div>
