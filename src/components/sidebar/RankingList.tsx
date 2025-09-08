@@ -1,10 +1,11 @@
 "use client";
-import React, { useState } from 'react';
-import { mockMediaRows } from '@/mock/mediaData'; // Usamos los datos de prueba
+import React, { useState, useMemo } from 'react';
+import { dailyRankingMock, weeklyRankingMock, monthlyRankingMock } from '@/mock/mediaData'; // <-- 1. Importa los nuevos datos
 import Image from 'next/image';
+import { Media } from '@/types/AniListResponse';
 
-// Un componente pequeño para cada item del ranking
-const RankingItem = ({ media, rank }: { media: any; rank: number }) => {
+// El componente RankingItem no necesita cambios
+const RankingItem = ({ media, rank }: { media: Media; rank: number }) => {
   const title = media.title.english || media.title.romaji;
   return (
     <li className="flex items-center space-x-3 group">
@@ -35,8 +36,25 @@ const RankingList = () => {
   const [showMore, setShowMore] = useState(false);
   const tabs = ['Diario', 'Semanal', 'Mensual'];
 
-  // Usamos los datos de "Trending" del mock para llenar el ranking
-  const rankingData = mockMediaRows.find(row => row.title === 'Trending')?.data || [];
+  // <-- 2. Lógica para seleccionar los datos correctos
+  const rankingData = useMemo(() => {
+    switch (activeTab) {
+      case 'Diario':
+        return dailyRankingMock;
+      case 'Semanal':
+        return weeklyRankingMock;
+      case 'Mensual':
+        return monthlyRankingMock;
+      default:
+        return dailyRankingMock;
+    }
+  }, [activeTab]);
+
+  // <-- 3. Al cambiar de pestaña, reseteamos "showMore"
+  const handleTabClick = (tab: string) => {
+    setActiveTab(tab);
+    setShowMore(false);
+  };
 
   return (
     <div className="sidebar-component bg-[#201f31] p-4 rounded-lg shadow-lg">
@@ -45,7 +63,7 @@ const RankingList = () => {
           {tabs.map(tab => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabClick(tab)} // <-- 4. Usamos el nuevo handler
               className={`flex-1 py-2 text-sm font-semibold transition-colors ${
                 activeTab === tab 
                 ? 'text-white border-b-2 border-[#ffbade]' 
@@ -58,8 +76,8 @@ const RankingList = () => {
         </div>
       </div>
       <ol className="space-y-3">
-        {rankingData.slice(0, showMore ? 10 : 5).map((media, index) => (
-          <RankingItem key={media.id} media={media} rank={index + 1} />
+        {rankingData.slice(0, showMore ? 12 : 5).map((media, index) => ( // Mostramos hasta 12
+          <RankingItem key={`${activeTab}-${media.id}`} media={media} rank={index + 1} />
         ))}
         {!showMore && rankingData.length > 5 && (
             <li 

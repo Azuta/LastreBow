@@ -1,7 +1,7 @@
 // src/services/anilist.ts
 
 import { Media } from "@/types/AniListResponse";
-import { mockMediaRows, mockMediaById } from "@/mock/mediaData";
+import { mockMediaRows, mockMediaById, dailyRankingMock, weeklyRankingMock, monthlyRankingMock } from "@/mock/mediaData";
 
 // #################################################################
 // ESTA ES LA ÚNICA FUNCIÓN QUE CAMBIA
@@ -129,4 +129,33 @@ export const fetchMediaById = async (id: number): Promise<Media> => {
   const data = await fetchFromOurAPI<{ Media: Media }>(query, variables);
   return data.Media;
   }
+};
+
+// --- NUEVA FUNCIÓN AÑADIDA ---
+// Simula la obtención de todos los mangas para una categoría y género específicos.
+export const fetchAllMediaByCategoryAndGenre = async (category: string, genre: string): Promise<Media[]> => {
+  console.log(`⚡️ Usando Mocks para Categoria: ${category}, Genero: ${genre}`);
+  
+  // En una aplicación real, aquí harías una llamada a la API con paginación y filtros.
+  // Por ahora, usamos los datos de prueba del ranking y los filtramos.
+  let sourceData: Media[] = [];
+  
+  // Elegimos una lista grande de mangas para simular
+  if (category.toLowerCase() === 'popular') {
+    sourceData = weeklyRankingMock;
+  } else if (category.toLowerCase() === 'trending') {
+      sourceData = dailyRankingMock;
+  } else {
+    sourceData = monthlyRankingMock;
+  }
+  
+  // Si el género no es 'all', filtramos por ese género.
+  if (genre !== 'all') {
+    return sourceData.filter(manga => 
+      manga.genres.some(g => g.toLowerCase() === genre.toLowerCase())
+    );
+  }
+
+  // Si es 'all', devolvemos la lista completa.
+  return sourceData;
 };
