@@ -1,84 +1,78 @@
 // src/components/media/CommentsSection.tsx
 "use client";
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Comment } from '@/types/AniListResponse';
 import CommentCard from './CommentCard';
+import { createClient } from '@/lib/supabaseClient';
 
 interface CommentsSectionProps {
-  comments: Comment[];
+  initialComments: Comment[];
   mediaId: number;
 }
 
-const CommentsSection = ({ comments: initialComments, mediaId }: CommentsSectionProps) => {
+const supabase = createClient();
+
+const CommentsSection = ({ initialComments, mediaId }: CommentsSectionProps) => {
     const { user, isLoggedIn, login } = useAuth();
     const [comments, setComments] = useState<Comment[]>(initialComments);
     const [newComment, setNewComment] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Organiza los comentarios en una estructura de árbol
-    const commentTree = useMemo(() => {
-        const commentMap: { [key: number]: Comment } = {};
-        const rootComments: Comment[] = [];
+    // Escuchar cambios en tiempo real para los comentarios (¡magia de Supabase!)
+    useEffect(() => {
+        const channel = supabase
+            .channel(`comments_for_${mediaId}`)
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'comments', filter: `media_id=eq.${mediaId}` },
+                (payload) => {
+                    // Necesitamos obtener el perfil del usuario para el nuevo comentario
+                    const fetchNewCommentProfile = async () => {
+                        const { data: profileData } = await supabase
+                            .from('profiles')
+                            .select('*')
+                            .eq('id', payload.new.user_id)
+                            .single();
+                        
+                        const commentWithProfile = { ...payload.new, profile: profileData };
+                        setComments((prevComments) => [commentWithProfile as Comment, ...prevComments]);
+                    }
+                    fetchNewCommentProfile();
+                }
+            )
+            .subscribe();
 
-        comments.forEach(comment => {
-            comment.replies = [];
-            commentMap[comment.id] = comment;
-        });
-
-        comments.forEach(comment => {
-            if (comment.parentId && commentMap[comment.parentId]) {
-                commentMap[comment.parentId].replies?.push(comment);
-            } else {
-                rootComments.push(comment);
-            }
-        });
-
-        return rootComments;
-    }, [comments]);
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [mediaId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newComment.trim() || !user) return;
+
         setIsSubmitting(true);
-        await new Promise(res => setTimeout(res, 500));
+        const { error } = await supabase.from('comments').insert({
+            content: newComment,
+            media_id: mediaId,
+            user_id: user.id,
+        });
 
-        const newCommentData: Comment = {
-            id: Date.now(),
-            user: { username: user.username, avatarUrl: user.avatarUrl },
-            text: newComment,
-            createdAt: 'justo ahora',
-            likes: 0,
-            parentId: null
-        };
-
-        setComments([newCommentData, ...comments]);
-        setNewComment('');
+        if (error) {
+            console.error("Error posting comment:", error);
+        } else {
+            setNewComment('');
+        }
         setIsSubmitting(false);
     };
     
-    // Función recursiva para renderizar los comentarios y sus respuestas
-    const renderComments = (commentsToRender: Comment[], depth = 0) => {
-        return commentsToRender.map(comment => (
-            <div key={comment.id} style={{ marginLeft: `${depth * 20}px` }} className="space-y-4">
-                <CommentCard comment={comment} />
-                {comment.replies && comment.replies.length > 0 && (
-                    <div className="border-l-2 border-gray-700/50 pl-4">
-                        {renderComments(comment.replies, depth + 1)}
-                    </div>
-                )}
-            </div>
-        ));
-    };
-
-
     return (
         <div className="content-section mt-12">
             <h3 className="text-xl font-bold text-white mb-6">Comentarios ({comments.length})</h3>
             <div className="bg-[#201f31] p-6 rounded-lg">
                 {isLoggedIn && user ? (
                     <form onSubmit={handleSubmit} className="flex items-start gap-4">
-                        <img src={user.avatarUrl} alt={user.username} className="w-12 h-12 rounded-full object-cover" />
                         <div className="flex-grow">
                             <textarea
                                 value={newComment}
@@ -95,13 +89,13 @@ const CommentsSection = ({ comments: initialComments, mediaId }: CommentsSection
                 ) : (
                     <div className="text-center text-gray-400">
                         <p>Necesitas iniciar sesión para poder comentar.</p>
-                        <button onClick={()=> login(user!)} className="mt-2 text-[#ffbade] font-semibold hover:underline">Iniciar Sesión</button>
+                        <button onClick={login} className="mt-2 text-[#ffbade] font-semibold hover:underline">Iniciar Sesión</button>
                     </div>
                 )}
             </div>
 
             <div className="mt-8 space-y-6">
-                {renderComments(commentTree)}
+                {comments.map(comment => <CommentCard key={comment.id} comment={comment} />)}
             </div>
         </div>
     );

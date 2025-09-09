@@ -1,142 +1,53 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Chapter, ChapterUpload } from '@/types/AniListResponse';
-import { mockChaptersList } from '@/mock/mediaData'; 
+import { Chapter } from '@/types/AniListResponse'; // Importa tu tipo Chapter si lo tienes definido
 import { useUserPreferences } from '@/context/UserPreferencesContext';
 import ExternalLinkModal from './ExternalLinkModal';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link'; // <-- CORRECCIÓN AQUÍ
+import Link from 'next/link';
 
-// --- Iconos ---
-const ExternalLinkIcon = () => <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w.org/2000/svg"><path fillRule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5-.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/><path fillRule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/></svg>;
-const SortIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 12H18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 17H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
-const EditIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
-const NoteIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"></path><polyline points="14 3 14 9 20 9"></polyline></svg>;
-const ChevronDownIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>;
+// --- Iconos (Sin cambios) ---
+const SortIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7H21" /><path d="M6 12H18" /><path d="M10 17H14" /></svg>;
+const EditIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
+const BookOpenIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>;
 
-const ChaptersTab = ({ onEditChapter }: { onEditChapter?: (chapter: ChapterUpload, chapterNumber: string, title?: string) => void; }) => {
-    const searchParams = useSearchParams();
-    const chapterRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-
-    const { warnOnExternalLinks, setWarnOnExternalLinks, setHideExternalLinks } = useUserPreferences();
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [externalLink, setExternalLink] = useState('');
-    
+// NOTA: El tipo 'any' se usa porque la data de Supabase es ligeramente diferente al mock.
+// Idealmente, crearías un tipo específico para `chapters` de Supabase.
+const ChaptersTab = ({ chapters, mediaId }: { chapters: any[], mediaId: number }) => {
     const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
-    const [expandedBatch, setExpandedBatch] = useState<string | null>(null);
-    const [expandedChapter, setExpandedChapter] = useState<string | null>(null);
-    
-    const BATCH_SIZE = 10;
-
-    useEffect(() => {
-        const newChapter = searchParams.get('newChapter');
-        if (newChapter) {
-            const batchStart = Math.floor((parseFloat(newChapter) - 1) / BATCH_SIZE) * BATCH_SIZE + 1;
-            const batchEnd = batchStart + BATCH_SIZE - 1;
-            setExpandedBatch(`${batchStart}-${batchEnd}`);
-            setExpandedChapter(newChapter);
-
-            setTimeout(() => {
-                chapterRefs.current[newChapter]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 100); 
-        }
-    }, [searchParams]);
     
     const sortedChapters = useMemo(() => {
-        return [...mockChaptersList].sort((a, b) => {
-            const numA = parseFloat(a.chapterNumber);
-            const numB = parseFloat(b.chapterNumber);
+        return [...chapters].sort((a, b) => {
+            const numA = parseFloat(a.chapter_number);
+            const numB = parseFloat(b.chapter_number);
             return sortOrder === 'asc' ? numA - numB : numB - numA;
         });
-    }, [sortOrder]);
-
-    const chapterBatches = useMemo(() => {
-        const batches: { [key: string]: Chapter[] } = {};
-        sortedChapters.forEach(ch => {
-            const num = parseFloat(ch.chapterNumber);
-            const batchStart = Math.floor((num - 1) / BATCH_SIZE) * BATCH_SIZE + 1;
-            const batchEnd = batchStart + BATCH_SIZE - 1;
-            const key = `${batchStart}-${batchEnd}`;
-            if (!batches[key]) batches[key] = [];
-            batches[key].push(ch);
-        });
-        return batches;
-    }, [sortedChapters]);
-    
-    const handleLinkClick = (url: string) => {
-        if (warnOnExternalLinks) {
-            setExternalLink(url);
-            setIsModalOpen(true);
-        } else {
-            window.open(url, '_blank', 'noopener,noreferrer');
-        }
-    };
-    
-    const handleConfirmRedirect = (dontShowAgain: boolean) => {
-        if (dontShowAgain) setWarnOnExternalLinks(false);
-        window.open(externalLink, '_blank', 'noopener,noreferrer');
-        setIsModalOpen(false);
-    };
-
-    const handleHideAll = () => {
-        setHideExternalLinks(true);
-        setIsModalOpen(false);
-    };
+    }, [sortOrder, chapters]);
 
     return (
         <div className="content-section">
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white">Lista de Capítulos</h3>
                 <button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-2 bg-gray-700/50 hover:bg-gray-600/80 text-gray-300 rounded-full" aria-label="Invertir orden">
                     <SortIcon />
                 </button>
             </div>
             <div className="space-y-2">
-                {Object.entries(chapterBatches).map(([batchKey, chapters]) => (
-                    <div key={batchKey} className="bg-[#201f31] rounded-lg">
-                        <button onClick={() => setExpandedBatch(expandedBatch === batchKey ? null : batchKey)} className="w-full flex justify-between items-center p-3 font-semibold text-white">
-                            <span>Capítulos {batchKey}</span>
-                            <ChevronDownIcon />
-                        </button>
-                        {expandedBatch === batchKey && (
-                            <div className="px-3 pb-3 space-y-2">
-                                {chapters.map(chapter => (
-                                    <div 
-                                        key={chapter.chapterNumber}
-                                        ref={el => chapterRefs.current[chapter.chapterNumber] = el}
-                                        className={`rounded-lg ${searchParams.get('newChapter') === chapter.chapterNumber ? 'bg-green-900/50' : ''}`}
-                                    >
-                                        <button onClick={() => setExpandedChapter(expandedChapter === chapter.chapterNumber ? null : chapter.chapterNumber)} className="w-full flex justify-between items-center p-2 bg-[#2b2d42]/50 hover:bg-[#2b2d42] rounded-md">
-                                            <span>Capítulo {chapter.chapterNumber}{chapter.title ? ` - ${chapter.title}` : ''}</span>
-                                            <span className="text-xs text-gray-400">{chapter.uploads.length} Versión(es)</span>
-                                        </button>
-                                        {expandedChapter === chapter.chapterNumber && (
-                                            <div className="pl-6 pr-2 py-2 space-y-2">
-                                                {chapter.uploads.map(upload => (
-                                                    <div key={upload.id} className="flex items-center justify-between p-2 bg-[#201f31] rounded-lg">
-                                                        <div>
-                                                            <p className="font-semibold text-sm text-white">{upload.scanGroup}</p>
-                                                            <p className="text-xs text-gray-400">{upload.uploadedAt}</p>
-                                                        </div>
-                                                        <div className="flex items-center gap-4">
-                                                            {upload.notes && <div className="relative group"><NoteIcon /><div className="absolute bottom-full mb-2 w-64 p-2 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 right-0">{upload.notes}</div></div>}
-                                                            {onEditChapter && <button onClick={() => onEditChapter(upload, chapter.chapterNumber, chapter.title)} className="text-gray-400 hover:text-white"><EditIcon /></button>}
-                                                            {upload.externalUrl ? 
-                                                                <button onClick={() => handleLinkClick(upload.externalUrl!)} className="text-gray-400 hover:text-white"><ExternalLinkIcon /></button>
-                                                                : <Link href={`/reader/123/${upload.id}`} className="text-gray-400 hover:text-white"><ExternalLinkIcon /></Link>
-                                                            }
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                {sortedChapters.map(chapter => (
+                    <div key={chapter.id} className="bg-[#201f31] p-3 rounded-lg flex justify-between items-center">
+                        <div>
+                            <p className="font-semibold text-white">Capítulo {chapter.chapter_number} {chapter.title ? `- ${chapter.title}` : ''}</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                                Subido por <span className="font-medium text-gray-300">{chapter.profile?.username || 'desconocido'}</span>
+                            </p>
+                        </div>
+                        <Link href={`/reader/${mediaId}/${chapter.id}`} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors">
+                            <BookOpenIcon />
+                            Leer
+                        </Link>
                     </div>
                 ))}
             </div>
-            <ExternalLinkModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onConfirm={handleConfirmRedirect} onHideAll={handleHideAll} />
         </div>
     );
 };

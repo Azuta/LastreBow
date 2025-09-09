@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Media } from '@/types/AniListResponse';
 import MangaCard from '@/components/ui/cards/MangaCard';
-import Link from 'next/link'; // <-- 1. Importar Link
+import Link from 'next/link';
 
 interface MangaSectionProps {
   title: string;
@@ -14,21 +14,24 @@ const MangaSection = ({ title, media }: MangaSectionProps) => {
   const filterTabs = [`P. Seinen`, `P. Josei`];
 
   const filteredMedia = useMemo(() => {
+    // 1. AÑADIMOS UN FILTRO DE SEGURIDAD
+    // Esto asegura que solo procesemos mangas que tengan un ID y un título.
+    const validMedia = media.filter(manga => manga && manga.id && manga.title);
+
     if (activeTab === title) {
-      return media;
+      return validMedia;
     }
     const genreToFilter = activeTab.split(' ')[1];
-    return media.filter(manga => 
+    return validMedia.filter(manga => 
       manga.genres.some(genre => genre.toLowerCase() === genreToFilter.toLowerCase())
     );
   }, [activeTab, media, title]);
 
-  // <-- 2. Lógica para determinar el enlace "Ver más"
   const viewMoreLink = useMemo(() => {
-      const category = title.toLowerCase().split(' ')[0]; // "trending", "popular"
+      const category = title.toLowerCase().split(' ')[0];
       let genre = 'all';
       if (activeTab !== title) {
-          genre = activeTab.split(' ')[1].toLowerCase(); // "seinen", "josei"
+          genre = activeTab.split(' ')[1].toLowerCase();
       }
       return `/browse/${category}/${genre}`;
   }, [activeTab, title]);
@@ -58,16 +61,17 @@ const MangaSection = ({ title, media }: MangaSectionProps) => {
             </button>
           ))}
         </div>
-        {/* 3. Reemplazar <a> con <Link> */}
         <Link href={viewMoreLink} className="text-sm text-gray-400 hover:text-[#ffbade] transition-colors self-end sm:self-center">
           Ver más &rarr;
         </Link>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-x-4 gap-y-6">
-        {filteredMedia.slice(0, 7).map((manga) => ( // Mostramos solo 7 en la página principal
+        {filteredMedia.slice(0, 7).map((manga) => (
           <MangaCard 
-            key={`${manga.id}-${manga.title.romaji}`}
+            // 2. CORREGIMOS EL 'key' PARA QUE SEA MÁS SEGURO
+            // Usar solo el ID es la forma más segura y recomendada en React.
+            key={manga.id}
             media={manga}
           />
         ))}

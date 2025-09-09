@@ -157,3 +157,16 @@ export interface Task {
 export interface Project extends Media {
     tasks: Task[];
 }
+
+export interface UserList {
+    id: string;
+    name: string;
+    description: string;
+    is_public: boolean; // <-- AÑADE ESTA LÍNEA
+    itemCount: number;
+    coverImages: string[];
+    user: {
+        username: string;
+    };
+    collaborators?: CommentUser[];
+}
