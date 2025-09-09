@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import RootProviders from "@/components/container/RootProvider";
 import { MediaProvider } from "@/context/MediaContext";
 import { UserPreferencesProvider } from "@/context/UserPreferencesContext"; 
-import { AuthProvider } from "@/context/AuthContext"; // <-- Importa el AuthProvider
+import { AuthProvider } from "@/context/AuthContext";
 import { Poppins } from "next/font/google";
 import "@/styles/global.css"
 
@@ -25,7 +25,6 @@ export default function RootLayout({
     <html lang="en">
       <body className={poppins.className}>
         <RootProviders>
-          {/* Envuelve los proveedores existentes con AuthProvider */}
           <AuthProvider>
             <MediaProvider>
               <UserPreferencesProvider>

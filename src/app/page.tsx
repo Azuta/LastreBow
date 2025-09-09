@@ -8,7 +8,8 @@ import MangaSection from "@/components/shared/MangaSection";
 import { Media } from "@/types/AniListResponse";
 import RankingList from '@/components/sidebar/RankingList';
 import ChatBox from '@/components/sidebar/ChatBox';
-import { MangaCardSkeleton } from "@/components/ui/skeletons/MangaCardSkeleton"; // <-- AÑADIDO
+import { MangaCardSkeleton } from "@/components/ui/skeletons/MangaCardSkeleton";
+import { mockContinueReading, mockNewChapters } from "@/mock/mediaData";
 
 const Home = () => {
   const [mediaRows, setMediaRows] = useState<{ title: string; data: Media[] }[]>([]);
@@ -20,7 +21,6 @@ const Home = () => {
     const loadInitialData = async () => {
       setIsLoading(true);
       try {
-        // Simular un poco más de tiempo de carga para ver los esqueletos
         await new Promise(resolve => setTimeout(resolve, 1000));
         const fetchedMediaRows = await fetchMediaRows();
         setMediaRows(fetchedMediaRows);
@@ -63,10 +63,13 @@ const Home = () => {
       if (!isLoggedIn) {
         return <p className="text-gray-400 text-center">Inicia sesión para ver tus recomendaciones personalizadas.</p>
       }
-      if (forYouMedia.length === 0) {
-        return <p className="text-gray-400 text-center">No tenemos recomendaciones para ti. ¡Añade más mangas a tus favoritos!</p>
-      }
-      return <MangaSection key="for-you" title="Recomendado para Ti" media={forYouMedia} />;
+      return (
+        <>
+            <MangaSection key="continue-reading" title="Continuar Leyendo" media={mockContinueReading} />
+            <MangaSection key="new-chapters" title="Nuevos Capítulos de Favoritos" media={mockNewChapters} />
+            {forYouMedia.length > 0 && <MangaSection key="for-you" title="Recomendado para Ti" media={forYouMedia} />}
+        </>
+      );
     }
 
     return mediaRows.map((row) => (

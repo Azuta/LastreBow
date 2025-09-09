@@ -8,6 +8,7 @@ export interface Achievement {
     type: 'reading' | 'genre' | 'community';
     progress: number;
     goal: number;
+    icon: 'BookOpenIcon' | 'FlameIcon' | 'CrownIcon'; // Para renderizado dinámico
 }
 
 // --- Tipos para Comentarios ---
@@ -22,6 +23,8 @@ export interface Comment {
     text: string;
     createdAt: string;
     likes: number;
+    parentId: number | null; // Para anidar respuestas
+    replies?: Comment[]; // Para contener las respuestas
 }
 
 // --- Tipos para Listas Personalizadas ---
@@ -30,10 +33,11 @@ export interface UserList {
     name: string;
     description: string;
     itemCount: number;
-    coverImages: string[]; // URLs de las primeras 3 portadas
+    coverImages: string[];
     user: {
         username: string;
     };
+    collaborators?: CommentUser[]; // Para listas colaborativas
 }
 
 export interface Staff {
@@ -98,11 +102,8 @@ export interface Media {
   status: 'RELEASING' | 'FINISHED' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS';
   format: string;
   type: 'ANIME' | 'MANGA';
-
-  // --- NUEVOS CAMPOS PARA FILTROS AVANZADOS ---
   tags?: string[];
   demographic?: 'Shounen' | 'Shoujo' | 'Seinen' | 'Josei' | null;
-
   staff?: Staff[];
   characters?: Character[];
   relations?: Relation[];
