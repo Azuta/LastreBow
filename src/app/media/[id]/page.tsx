@@ -1,98 +1,223 @@
 // src/app/media/[id]/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from 'next/image';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { fetchMediaById } from "@/services/fetchAniList";
-import { Media, Chapter } from "@/types/AniListResponse";
+import { Media, Chapter, ChapterUpload } from "@/types/AniListResponse";
 import Navbar from "@/components/layout/Navbar";
 import OverviewTab from "@/components/media/OverviewTab";
 import ChaptersTab from "@/components/media/ChaptersTab";
 import { useAuth } from "@/context/AuthContext";
+import ConfirmationModal from "@/components/media/ConfirmationModal";
 
-// --- Icono ---
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+
+// --- Iconos ---
 const UploadCloudIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>;
+const GripVerticalIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>;
 
-// --- Pestaña para Subir/Editar Capítulos ---
-const ChapterManagementTab = ({ media, existingChapter, onSave }: { media: Media; existingChapter: Chapter | null; onSave: (data: any, isEditing: boolean) => void; }) => {
-    const isEditing = existingChapter !== null;
-
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        const formData = new FormData(e.currentTarget);
-        const data = {
-            id: formData.get('chapter-number'),
-            title: formData.get('chapter-title'),
-            notes: formData.get('chapter-notes'),
-        };
-        onSave(data, isEditing);
-    };
-
+// --- Componente para la previsualización de la página ---
+const SortablePagePreview = ({ id, src, index, isDragging }: { id: string; src: string; index: number, isDragging: boolean }) => {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+    const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 };
     return (
-        <div className="max-w-screen-md mx-auto bg-[#201f31] p-8 rounded-lg">
-            <h3 className="text-2xl font-bold text-white mb-6">
-                {isEditing ? `Editando Capítulo ${existingChapter.id}` : `Subir capítulo para: ${media.title.romaji}`}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label htmlFor="chapter-number" className="block text-sm font-medium text-gray-300 mb-2">Número</label>
-                        <input key={existingChapter?.id} type="text" name="chapter-number" defaultValue={existingChapter?.id || ''} placeholder="Ej: 125 o 125.5" required className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2" readOnly={isEditing} />
-                    </div>
-                    <div>
-                        <label htmlFor="chapter-title" className="block text-sm font-medium text-gray-300 mb-2">Título (Opcional)</label>
-                        <input key={existingChapter?.id} type="text" name="chapter-title" defaultValue={existingChapter?.title || ''} placeholder="Ej: El Despertar" className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2" />
-                    </div>
-                </div>
-                <div>
-                    <label htmlFor="chapter-notes" className="block text-sm font-medium text-gray-300 mb-2">Notas del Autor (Opcional)</label>
-                    <textarea key={existingChapter?.id} name="chapter-notes" defaultValue={existingChapter?.notes || ''} rows={3} placeholder="Notas sobre el lanzamiento, agradecimientos, etc." className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2"></textarea>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Archivos del Capítulo</label>
-                    <div className="mt-2 flex justify-center rounded-lg border-2 border-dashed border-gray-600 px-6 py-10">
-                        <div className="text-center">
-                            <UploadCloudIcon />
-                            <p className="mt-4 text-sm text-gray-400">{isEditing ? 'Sube nuevos archivos para reemplazar los actuales.' : 'Sube los archivos del nuevo capítulo.'}</p>
-                            <input name="file-upload" type="file" className="text-xs text-gray-500 mt-2" multiple required={!isEditing} />
-                        </div>
-                    </div>
-                </div>
-                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">{isEditing ? 'Guardar Cambios' : 'Subir Capítulo'}</button>
-            </form>
+        <div ref={setNodeRef} style={style} {...attributes} className="relative aspect-[2/3] bg-gray-800 rounded-md p-1">
+            <img src={src} alt={`Página ${index + 1}`} className="w-full h-full object-cover rounded-sm"/>
+            <span className="absolute top-1 right-1 text-xs bg-black/50 text-white rounded-full px-1.5 py-0.5">{index + 1}</span>
+            <div {...listeners} className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"><GripVerticalIcon/></div>
         </div>
     );
 };
 
+// --- Componente para el Overlay ---
+const PagePreviewOverlay = ({ src, index }: { src: string, index: number }) => (
+    <div className="relative aspect-[2/3] bg-gray-800 rounded-md p-1 shadow-2xl scale-105">
+        <img src={src} alt={`Página ${index + 1}`} className="w-full h-full object-cover rounded-sm"/>
+        <span className="absolute top-1 right-1 text-xs bg-black/50 text-white rounded-full px-1.5 py-0.5">{index + 1}</span>
+    </div>
+);
+
+// --- Pestaña para Subir/Editar Capítulos ---
+const ChapterManagementTab = ({ media, existingChapter, onSave }: { media: Media; existingChapter: ChapterUpload | null; onSave: (data: any, isEditing: boolean) => void; }) => {
+    const isEditing = existingChapter !== null;
+    const { user } = useAuth();
+
+    const [pages, setPages] = useState<File[]>([]);
+    const [pagePreviews, setPagePreviews] = useState<{ id: string; url: string }[]>([]);
+    const [isScheduling, setIsScheduling] = useState(false);
+    const [publishDate, setPublishDate] = useState('');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [formData, setFormData] = useState<any>(null);
+    const [activeDragId, setActiveDragId] = useState<string | null>(null);
+    const [chapterNumberError, setChapterNumberError] = useState<string>('');
+    const chapterNumberInputRef = useRef<HTMLInputElement>(null);
+
+    const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+
+    useEffect(() => {
+        const previews = pages.map((file, index) => ({ id: `${file.name}-${index}`, url: URL.createObjectURL(file) }));
+        setPagePreviews(previews);
+        return () => previews.forEach(p => URL.revokeObjectURL(p.url));
+    }, [pages]);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files) setPages(Array.from(e.target.files)); };
+    const handleDragStart = (event: DragStartEvent) => setActiveDragId(event.active.id as string);
+    const handleDragEnd = (event: DragEndEvent) => {
+        setActiveDragId(null);
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            const oldIndex = pagePreviews.findIndex(item => item.id === active.id);
+            const newIndex = pagePreviews.findIndex(item => item.id === over.id);
+            setPagePreviews((items) => arrayMove(items, oldIndex, newIndex));
+            setPages((currentPages) => arrayMove(currentPages, oldIndex, newIndex));
+        }
+    };
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = new FormData(e.currentTarget);
+        const chapterNumber = form.get('chapter-number') as string;
+
+        if (!chapterNumber || chapterNumber.trim() === '') {
+            setChapterNumberError('El número del capítulo es obligatorio.');
+            chapterNumberInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        setChapterNumberError('');
+
+        const data = {
+            manga: media.title.romaji,
+            chapter: chapterNumber,
+            title: form.get('chapter-title'),
+            notes: form.get('chapter-notes'),
+            publishDate: isScheduling && publishDate ? new Date(publishDate).toLocaleString() : 'Inmediatamente',
+            totalPages: pages.length,
+            scan: "Tu Scanlation",
+            user: user?.username || 'Desconocido',
+        };
+        setFormData(data);
+        setIsModalOpen(true);
+    };
+
+    const handleConfirmUpload = () => { onSave(formData, isEditing); setIsModalOpen(false); };
+    const activePage = activeDragId ? pagePreviews.find(p => p.id === activeDragId) : null;
+    const activeIndex = activePage ? pagePreviews.indexOf(activePage) : -1;
+
+    return (
+        <>
+            <div className="max-w-screen-md mx-auto bg-[#201f31] p-8 rounded-lg">
+                <h3 className="text-2xl font-bold text-white mb-6">{isEditing ? `Editando Capítulo ${existingChapter?.id}` : `Subir capítulo para: ${media.title.romaji}`}</h3>
+                <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+                     <div>
+                        <label htmlFor="chapter-number" className="block text-sm font-medium text-gray-300 mb-2">Número</label>
+                        <input ref={chapterNumberInputRef} key={existingChapter?.id} type="text" name="chapter-number" defaultValue={existingChapter?.id || ''} placeholder="Ej: 125 o 125.5" className={`w-full bg-gray-700/50 text-white rounded-lg px-4 py-2 border-2 ${chapterNumberError ? 'border-red-500' : 'border-transparent'} focus:ring-2 focus:ring-[#ffbade] focus:border-transparent`} readOnly={isEditing} onChange={() => setChapterNumberError('')}/>
+                        {chapterNumberError && <p className="text-red-500 text-xs mt-1">{chapterNumberError}</p>}
+                    </div>
+                    <div>
+                        <label htmlFor="chapter-title" className="block text-sm font-medium text-gray-300 mb-2">Título (Opcional)</label>
+                        <input key={existingChapter?.id} type="text" name="chapter-title" placeholder="Ej: El Despertar" className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2" />
+                    </div>
+                    <div>
+                        <label htmlFor="chapter-notes" className="block text-sm font-medium text-gray-300 mb-2">Notas del Autor (Opcional)</label>
+                        <textarea key={existingChapter?.id} name="chapter-notes" defaultValue={existingChapter?.notes || ''} rows={3} placeholder="Notas sobre el lanzamiento..." className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2"></textarea>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Páginas del Capítulo</label>
+                        <div className="mt-2 flex justify-center rounded-lg border-2 border-dashed border-gray-600 px-6 py-10">
+                            <div className="text-center">
+                                <UploadCloudIcon />
+                                <p className="mt-4 text-sm text-gray-400">Arrastra o selecciona las páginas</p>
+                                <input name="file-upload" type="file" onChange={handleFileChange} className="text-xs text-gray-500 mt-2" multiple accept="image/*"/>
+                            </div>
+                        </div>
+                        {pagePreviews.length > 0 && (
+                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                                <SortableContext items={pagePreviews} strategy={rectSortingStrategy}>
+                                    <p className="text-xs text-gray-400 mt-4 mb-2">Puedes arrastrar y soltar las imágenes para reordenarlas.</p>
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                                        {pagePreviews.map((page, index) => (<SortablePagePreview key={page.id} id={page.id} src={page.url} index={index} isDragging={activeDragId === page.id}/>))}
+                                    </div>
+                                </SortableContext>
+                                <DragOverlay>{activePage ? <PagePreviewOverlay src={activePage.url} index={activeIndex} /> : null}</DragOverlay>
+                            </DndContext>
+                        )}
+                    </div>
+                    <div>
+                        <label className="flex items-center gap-2 text-sm text-gray-300">
+                            <input type="checkbox" checked={isScheduling} onChange={() => setIsScheduling(!isScheduling)} className="h-4 w-4 bg-gray-700 border-gray-600 rounded text-indigo-600" />
+                            Programar publicación
+                        </label>
+                        {isScheduling && (<div className="mt-4"><input type="datetime-local" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2" /></div>)}
+                    </div>
+                    <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">{isEditing ? 'Guardar Cambios' : 'Subir Capítulo'}</button>
+                </form>
+            </div>
+            {formData && (<ConfirmationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onConfirm={handleConfirmUpload} summary={formData} />)}
+        </>
+    );
+};
+
+// --- CORRECCIÓN AQUÍ ---
 const MediaDetailPage = ({ params }: { params: { id: string } }) => {
+    const { id } = params; // Desestructurar el id aquí
+    // -------------------
+    
     const [media, setMedia] = useState<Media | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'chapters' | 'overview' | 'manage_chapter'>('chapters');
-    const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
-    const { user, isLoggedIn, addNotification } = useAuth(); // <-- Añadir "addNotification"
+    const [selectedChapter, setSelectedChapter] = useState<ChapterUpload | null>(null);
+    const { user, isLoggedIn, addNotification } = useAuth();
+    const router = useRouter();
 
-    useEffect(() => { const loadMedia = async () => { setIsLoading(true); const mediaData = await fetchMediaById(Number(params.id)); setMedia(mediaData); setIsLoading(false); }; loadMedia(); }, [params.id]);
+    useEffect(() => { 
+        const loadMedia = async () => { 
+            setIsLoading(true); 
+            const mediaData = await fetchMediaById(Number(id)); // Usar la variable desestructurada
+            setMedia(mediaData); 
+            setIsLoading(false); 
+        }; 
+        loadMedia(); 
+    }, [id]); // Usar la variable en el array de dependencias
 
-    // --- Lógica de Permisos Mejorada ---
-    // El usuario puede gestionar capítulos si ha iniciado sesión Y si el ID del grupo del manga coincide con el ID de su grupo.
     // @ts-ignore
     const canManageChapters = isLoggedIn && media?.scanGroupId && user?.scanGroupId === media.scanGroupId;
 
-    const handleEditChapter = (chapter: Chapter) => { setSelectedChapter(chapter); setActiveTab('manage_chapter'); };
+    const handleEditChapter = (upload: ChapterUpload, chapterNumber: string, title?: string) => { 
+        // @ts-ignore
+        setSelectedChapter({ ...upload, id: chapterNumber, title: title }); 
+        setActiveTab('manage_chapter'); 
+    };
     const handleShowUpload = () => { setSelectedChapter(null); setActiveTab('manage_chapter'); };
+    
     const handleSaveChapter = (data: any, isEditing: boolean) => {
+        if (!media) return;
         const message = isEditing 
-            ? `Se actualizó el capítulo ${data.id} de "${media.title.romaji}"`
-            : `¡Nuevo capítulo! ${data.id} de "${media.title.romaji}" ya está disponible`;
+            ? `Se actualizó el capítulo ${data.chapter} de "${media.title.romaji}"`
+            : `¡Nuevo capítulo! ${data.chapter} de "${media.title.romaji}" ya está disponible`;
 
-        // Simular la creación de la notificación
-        addNotification({
-            message: message,
-            link: `/media/${media.id}`,
-        });
-
-        alert(isEditing ? 'Cambios guardados' : 'Capítulo subido');
+        addNotification({ message, link: `/media/${media.id}` });
+        router.push(`/media/${media.id}?newChapter=${data.chapter}`);
         setActiveTab('chapters');
     };
 
@@ -121,7 +246,7 @@ const MediaDetailPage = ({ params }: { params: { id: string } }) => {
                             )}
                         </div>
                         {activeTab === 'overview' && <OverviewTab media={media} />}
-                        {activeTab === 'chapters' && <ChaptersTab onLinkClick={() => {}} onEditChapter={canManageChapters ? handleEditChapter : undefined} />}
+                        {activeTab === 'chapters' && <ChaptersTab onEditChapter={canManageChapters ? handleEditChapter : undefined} />}
                         {activeTab === 'manage_chapter' && canManageChapters && <ChapterManagementTab media={media} existingChapter={selectedChapter} onSave={handleSaveChapter} />}
                     </div>
                 </div>

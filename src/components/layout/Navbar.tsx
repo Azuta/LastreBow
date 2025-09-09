@@ -17,9 +17,9 @@ const Navbar = () => {
   const { isLoggedIn, login, user } = useAuth();
   const [isDayMode, setIsDayMode] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false); // <-- NUEVO
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const notificationsRef = useRef<HTMLDivElement>(null); // <-- NUEVO
+  const notificationsRef = useRef<HTMLDivElement>(null);
 
   const hasUnreadNotifications = user?.notifications.some(n => !n.read) || false;
 
@@ -27,7 +27,9 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (userMenu.current && !userMenu.current.contains(event.target as Node)) setIsUserMenuOpen(false);
+      // --- CORRECCIÓN AQUÍ ---
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) setIsUserMenuOpen(false);
+      // -----------------------
       if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) setIsNotificationsOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);

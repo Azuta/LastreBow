@@ -18,7 +18,6 @@ const BookOpenIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill=
 // --- Tipos y Datos de Prueba Completos ---
 type ScanGroup = { id: string; name: string; logoUrl: string; bannerUrl: string; description: string; membersCount: number; projectsCount: number; projects: Media[]; members: { id: string; username: string; avatarUrl: string; role: 'Líder' | 'Miembro' }[]; socials: { twitter?: string; discord?: string; website?: string; } };
 
-// CORRECCIÓN: Ahora incluimos los datos de TODOS los grupos para que la página cargue sin importar a cuál se acceda.
 const MOCK_GROUP_DATA: { [key: string]: ScanGroup } = {
     'group001': { id: 'group001', name: 'No Sleep Scans', logoUrl: 'https://i.pravatar.cc/150?u=group001', bannerUrl: 'https://s4.anilist.co/file/anilistcdn/media/manga/banner/m105778-y0sYV9Z5W2oA.jpg', description: 'Dedicados a traer los mejores mangas de acción y seinen.', membersCount: 12, projectsCount: 5, projects: dailyRankingMock.slice(0, 5).map(p => ({...p, chapters: Math.floor(Math.random()*200), collaboratorsCount: Math.floor(Math.random()*10)+2})), members: [ { id: 'user004', username: 'Kaiser', avatarUrl: 'https://i.pravatar.cc/150?u=user004', role: 'Líder' }, { id: 'user005', username: 'Zephyr', avatarUrl: 'https://i.pravatar.cc/150?u=user005', role: 'Miembro' } ], socials: { twitter: 'https://twitter.com/NoSleep', discord: 'https://discord.gg/nosleep' } },
     'group002': { id: 'group002', name: 'Shadow Garden Scans', logoUrl: 'https://i.pravatar.cc/150?u=group002', bannerUrl: 'https://s4.anilist.co/file/anilistcdn/media/manga/banner/m30002-Qxs7j430c4aE.jpg', description: 'Traducciones de alta calidad para obras de misterio y fantasía.', membersCount: 8, projectsCount: 3, projects: dailyRankingMock.slice(5, 8).map(p => ({...p, chapters: Math.floor(Math.random()*100), collaboratorsCount: Math.floor(Math.random()*5)+2})), members: [ { id: 'user006', username: 'Alpha', avatarUrl: 'https://i.pravatar.cc/150?u=user006', role: 'Líder' } ], socials: { discord: 'https://discord.gg/shadow' } },
@@ -26,7 +25,11 @@ const MOCK_GROUP_DATA: { [key: string]: ScanGroup } = {
     'group004': { id: 'group004', name: 'Romance Lovers', logoUrl: 'https://i.pravatar.cc/150?u=group004', bannerUrl: 'https://s4.anilist.co/file/anilistcdn/media/manga/banner/m99324-h5e2jCB2N34g.jpg', description: 'Especialistas en Shojo y Josei. Historias que te tocarán el corazón.', membersCount: 18, projectsCount: 9, projects: [], members: [], socials: {}}
 };
 
+// --- CORRECCIÓN AQUÍ ---
 const GroupPage = ({ params }: { params: { groupId: string } }) => {
+    const { groupId } = params; // Desestructurar el groupId aquí
+    // -------------------
+
     const [groupData, setGroupData] = useState<ScanGroup | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'projects' | 'members' | 'settings'>('projects');
@@ -35,7 +38,7 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
     useEffect(() => {
         const loadGroupData = async () => {
             setIsLoading(true);
-            const data = MOCK_GROUP_DATA[params.groupId];
+            const data = MOCK_GROUP_DATA[groupId]; // Usar la variable desestructurada
             if (data) {
                 setGroupData(data);
             } else {
@@ -44,9 +47,9 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
             setIsLoading(false);
         };
         loadGroupData();
-    }, [params.groupId]);
+    }, [groupId]); // Usar la variable en el array de dependencias
 
-    const isFollowing = user?.followedScanGroups.includes(params.groupId) || false;
+    const isFollowing = user?.followedScanGroups.includes(groupId) || false;
 
     if (isLoading || !groupData) {
         return <><Navbar /><div className="text-center py-20 text-white">Cargando grupo...</div></>;
@@ -57,13 +60,13 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
             <Navbar />
             <main>
                 <div className="relative h-48 md:h-64 w-full">
-                    <Image src={groupData.bannerUrl} alt={`${groupData.name} Banner`} layout="fill" objectFit="cover" />
+                    <Image src={groupData.bannerUrl} alt={`${groupData.name} Banner`} fill style={{ objectFit: 'cover' }} />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a24] to-transparent"></div>
                 </div>
                 <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-20">
                         <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-md overflow-hidden border-4 border-[#1a1a24] shadow-lg flex-shrink-0">
-                            <Image src={groupData.logoUrl} alt={groupData.name} layout="fill" objectFit="cover" />
+                            <Image src={groupData.logoUrl} alt={groupData.name} fill style={{ objectFit: 'cover' }} />
                         </div>
                         <div className="ml-0 sm:ml-6 mt-4 sm:mb-4 text-center sm:text-left">
                             <h1 className="text-3xl md:text-4xl font-bold text-white">{groupData.name}</h1>
@@ -73,7 +76,7 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
                                 <div className="flex items-center gap-1 text-sm text-gray-400"><BookOpenIcon /> {groupData.projectsCount} Proyectos</div>
                                 {isLoggedIn && (
                                     <button 
-                                        onClick={() => toggleFollowGroup(params.groupId)}
+                                        onClick={() => toggleFollowGroup(groupId)}
                                         className={`px-4 py-1 rounded-full text-sm font-semibold transition-colors ${
                                             isFollowing 
                                                 ? 'bg-[#ffbade] text-black' 
@@ -100,7 +103,7 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
                             )}
                             {activeTab === 'members' && (
                                 <div className="max-w-screen-md mx-auto space-y-4 py-8">
-                                    {groupData.members.map(member => <div key={member.id} className="bg-[#201f31] rounded-lg p-4 flex items-center gap-4"><div className="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0"><Image src={member.avatarUrl} alt={member.username} layout="fill" objectFit="cover" /></div><div><h3 className="font-bold text-white">{member.username}</h3><p className="text-sm text-[#ffbade]">{member.role}</p></div></div>)}
+                                    {groupData.members.map(member => <div key={member.id} className="bg-[#201f31] rounded-lg p-4 flex items-center gap-4"><div className="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0"><Image src={member.avatarUrl} alt={member.username} fill style={{ objectFit: 'cover' }} /></div><div><h3 className="font-bold text-white">{member.username}</h3><p className="text-sm text-[#ffbade]">{member.role}</p></div></div>)}
                                 </div>
                             )}
                             {activeTab === 'settings' && (

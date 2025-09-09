@@ -85,15 +85,54 @@ export const mockMediaRows: { title: string; data: Media[] }[] = [
     }
 ];
 
-// Mock para un solo item por ID
+
+
+// --- NUEVOS DATOS DE PRUEBA PARA LA LISTA DE CAPÍTULOS ---
+export const mockChaptersList: Chapter[] = [
+    {
+        chapterNumber: "377",
+        title: "El Rugido del Dragón",
+        uploads: [
+            { id: "nss-377", scanGroup: "No Sleep Scans", uploadedAt: "hace 1 día", externalUrl: "https://nosleepscans.com/berserk/377", notes: "¡Disfruten del nuevo capítulo! Tuvimos que rehacer varias páginas para asegurar la máxima calidad." },
+            { id: "sgs-377", scanGroup: "Shadow Garden Scans", uploadedAt: "hace 23 horas", externalUrl: "https://shadowgardenscans.com/berserk/377" }
+        ]
+    },
+    {
+        chapterNumber: "376",
+        uploads: [
+            { id: "nss-376", scanGroup: "No Sleep Scans", uploadedAt: "hace 2 días" },
+        ]
+    },
+    {
+        chapterNumber: "375",
+        title: "La Llegada",
+        uploads: [
+            { id: "nss-375", scanGroup: "No Sleep Scans", uploadedAt: "hace 3 días" },
+            { id: "ifs-375", scanGroup: "Isekai Fanatics", uploadedAt: "hace 2 días", externalUrl: "https://isekaifans.com/berserk/375" }
+        ]
+    },
+    // Añadimos más capítulos para poder agruparlos en lotes
+    ...Array.from({ length: 25 }, (_, i) => ({
+        chapterNumber: `${374 - i}`,
+        uploads: [
+            { id: `nss-${374 - i}`, scanGroup: "No Sleep Scans", uploadedAt: `hace ${i + 4} días` }
+        ]
+    }))
+];
+// --- FIN DE LOS NUEVOS DATOS ---
+
+
+// Mock para un solo item por ID (AÑADIMOS LA LISTA DE CAPÍTULOS)
 export const mockMediaById: Media = {
     id: 30002,
     scanGroupId: "group001",
+    chapterList: mockChaptersList, // <-- AÑADIDO
     title: {
         romaji: "Berserk",
         english: "Berserk",
         native: "ベルセルク"
     },
+    // ... (el resto del objeto mockMediaById se mantiene igual)
     coverImage: {
         extraLarge: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx30002-sCN3X1fW1FBU.jpg",
         large: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30002-sCN3X1fW1FBU.jpg",
@@ -111,28 +150,14 @@ export const mockMediaById: Media = {
     format: 'MANGA',
     type: 'MANGA',
     trailer: {
-        id: "qc6406yq1d4", // ID de YouTube para "Berserk: The Golden Age Arc - Memorial Edition"
+        id: "qc6406yq1d4",
         site: "youtube"
     },
     staff: [
         { id: 1, name: "Kentarou Miura", role: "Story & Art", image: "https://s4.anilist.co/file/anilistcdn/staff/s/n96913-6DDPAz2PS1Gg.jpg" },
-        { id: 2, name: "Studio Gaga", role: "Art", image: "https://placehold.co/80x80/201f31/e0e0e0?text=SG" },
-        { id: 3, name: "Kouji Mori", role: "Supervision", image: "https://placehold.co/80x80/201f31/e0e0e0?text=KM" },
-        { id: 4, name: "Akira Shimada", role: "Editing", image: "https://placehold.co/80x80/201f31/e0e0e0?text=AS" },
-        { id: 5, name: "Toshimitsu Kobayashi", role: "Assistant", image: "https://placehold.co/80x80/201f31/e0e0e0?text=TK" },
-        { id: 6, name: "Mitsuhisa Ishikawa", role: "Producer", image: "https://placehold.co/80x80/201f31/e0e0e0?text=MI" },
-        { id: 7, name: "Taro Maki", role: "Executive Producer", image: "https://placehold.co/80x80/201f31/e0e0e0?text=TM" }
     ],
     characters: [
         { id: 1, name: "Guts", role: "MAIN", image: "https://s4.anilist.co/file/anilistcdn/character/large/b40-330m2t7N5S4A.png" },
-        { id: 2, name: "Griffith", role: "MAIN", image: "https://s4.anilist.co/file/anilistcdn/character/large/b153-2h1e47926J19.png" },
-        { id: 3, name: "Casca", role: "MAIN", image: "https://s4.anilist.co/file/anilistcdn/character/large/b133-33Gog524fTj3.png" },
-        { id: 4, name: "Puck", role: "SUPPORTING", image: "https://s4.anilist.co/file/anilistcdn/character/large/b135-N1s223o20awn.png" },
-        { id: 5, name: "Judeau", role: "SUPPORTING", image: "https://s4.anilist.co/file/anilistcdn/character/large/b134-93G14Yf11Jg5.png" },
-        { id: 6, name: "Schierke", role: "SUPPORTING", image: "https://s4.anilist.co/file/anilistcdn/character/large/b136-1WkERv5V3s0d.png" },
-        { id: 7, name: "Farnese", role: "SUPPORTING", image: "https://s4.anilist.co/file/anilistcdn/character/large/b1725-lp33Lnaa5LUI.png" },
-        { id: 8, name: "Serpico", role: "SUPPORTING", image: "https://s4.anilist.co/file/anilistcdn/character/large/b1726-2E2guT0xVfg3.png" },
-        { id: 9, name: "Isidro", role: "SUPPORTING", image: "https://s4.anilist.co/file/anilistcdn/character/large/b1727-TceH3l6pM7sv.png" }
     ],
     relations: [
         {
@@ -140,23 +165,8 @@ export const mockMediaById: Media = {
             relationType: "ADAPTATION",
             media: { id: 21, title: { romaji: "Kenpuu Denki Berserk", english: "Berserk (1997)", native: "剣風伝奇ベルセルク" }, format: "ANIME", status: "FINISHED", type: "ANIME", coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21-e3Yb52iJm23V.jpg", extraLarge: "", medium: "", color: "" }, description: "", episodes: 25, chapters: null, genres: [], averageScore: 0, popularity: 0 }
         },
-        {
-            id: 2,
-            relationType: "ADAPTATION",
-            media: { id: 121235, title: { romaji: "Berserk: Ougon Jidai-hen - MEMORIAL EDITION", english: "Berserk: The Golden Age Arc - Memorial Edition", native: "ベルセルク 黄金時代篇 MEMORIAL EDITION" }, format: "ANIME", status: "FINISHED", type: "ANIME", coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx121235-bV2k23a13b0C.jpg", extraLarge: "", medium: "", color: "" }, description: "", episodes: 13, chapters: null, genres: [], averageScore: 0, popularity: 0 }
-        },
-        {
-            id: 3,
-            relationType: "SIDE_STORY",
-            media: { id: 44299, title: { romaji: "Berserk: Shinen no Kami (2010)", english: null, native: "ベルセルク" }, format: "MANGA", status: "FINISHED", type: "MANGA", coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/14299.jpg", extraLarge: "", medium: "", color: "" }, description: "", episodes: null, chapters: 1, genres: [], averageScore: 0, popularity: 0 }
-        }
     ],
     recommendations: [
         { id: 1, media: { id: 30656, title: { romaji: "Vagabond", english: "Vagabond", native: "バガボンド" }, format: "MANGA", status: "HIATUS", type: "MANGA", coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30656-9mW113O7rDnA.png", extraLarge: "", medium: "", color: "" }, description: "", episodes: null, chapters: null, genres: [], averageScore: 0, popularity: 0 } },
-        { id: 2, media: { id: 30642, title: { romaji: "Vinland Saga", english: "Vinland Saga", native: "ヴィンランド・サガ" }, format: "MANGA", status: "RELEASING", type: "MANGA", coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30642-0mjRDkf4THpo.jpg", extraLarge: "", medium: "", color: "" }, description: "", episodes: null, chapters: null, genres: [], averageScore: 0, popularity: 0 } },
-        { id: 3, media: { id: 31706, title: { romaji: "Steel Ball Run", english: "Steel Ball Run", native: "スティール・ボール・ラン" }, format: "MANGA", status: "FINISHED", type: "MANGA", coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx31706-lRncu9VbcBB7.png", extraLarge: "", medium: "", color: "" }, description: "", episodes: null, chapters: null, genres: [], averageScore: 0, popularity: 0 } },
-        { id: 4, media: { id: 30069, title: { romaji: "Kingdom", english: "Kingdom", native: "キングダム" }, format: "MANGA", status: "RELEASING", type: "MANGA", coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30069-sHckrplWS9Sg.jpg", extraLarge: "", medium: "", color: "" }, description: "", episodes: null, chapters: null, genres: [], averageScore: 0, popularity: 0 } },
-        { id: 5, media: { id: 30025, title: { romaji: "Monster", english: "Monster", native: "MONSTER" }, format: "MANGA", status: "FINISHED", type: "MANGA", coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30025-Pfr6aZhAM42F.jpg", extraLarge: "", medium: "", color: "" }, description: "", episodes: null, chapters: null, genres: [], averageScore: 0, popularity: 0 } },
-        { id: 6, media: { id: 85399, title: { romaji: "Houseki no Kuni", english: "Land of the Lustrous", native: "宝石の国" }, format: "MANGA", status: "RELEASING", type: "MANGA", coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx85399-52mSt30s2sU1.jpg", extraLarge: "", medium: "", color: "" }, description: "", episodes: null, chapters: null, genres: [], averageScore: 0, popularity: 0 } }
     ]
 };
