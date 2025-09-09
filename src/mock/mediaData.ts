@@ -1,5 +1,5 @@
 // src/mock/mediaData.ts
-import { Media } from "@/types/AniListResponse";
+import { Media, Chapter, Comment, UserList, Achievement } from "@/types/AniListResponse";
 
 // --- DATOS PARA EL RANKING ---
 export const dailyRankingMock: Media[] = [
@@ -61,7 +61,6 @@ export const mockMediaRows: { title: string; data: Media[] }[] = [
             { "id": 30013, "title": { "english": "One Piece", "romaji": "ONE PIECE", "native": "ONE PIECE" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30013-BeslEMqiPhlk.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx30013-BeslEMqiPhlk.jpg", "medium": "", "color": null }, "genres": ["Action", "Adventure", "Comedy", "Seinen"], "averageScore": 91, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
             { "id": 137280, "title": { "english": "I’m the Max-Level Newbie", "romaji": "Na Honja Mallep Newbie", "native": "Na Honja Mallep Newbie" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx137280-juUL79K7f9s7.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx137280-juUL79K7f9s7.png", "medium": "", "color": null }, "genres": ["Action", "Adventure", "Josei"], "averageScore": 77, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
             { "id": 177706, "title": { "english": "The Knight Only Lives Today", "romaji": "Oneulman Saneun Gisa", "native": "Oneulman Saneun Gisa" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx177706-3r8dnAr8Prjq.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx177706-3r8dnAr8Prjq.jpg", "medium": "", "color": null }, "genres": ["Action", "Adventure", "Fantasy"], "averageScore": 81, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-            // --- SE ELIMINARON LOS DUPLICADOS DE AQUÍ ---
             { "id": 105778, "title": { "english": "Chainsaw Man", "romaji": "Chainsaw Man", "native": "Chainsaw Man" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx105778-euxXZEIfDY2u.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx105778-euxXZEIfDY2u.png", "medium": "", "color": null }, "genres": ["Comedy", "Comedy", "Seinen"], "averageScore": 85, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
             { "id": 101517, "title": { "english": "Jujutsu Kaisen", "romaji": "Jujutsu Kaisen", "native": "Jujutsu Kaisen" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx101517-H3TdM3g5ZUe9.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx101517-H3TdM3g5ZUe9.jpg", "medium": "", "color": null }, "genres": ["Action", "Supernatural"], "averageScore": 80, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
             { "id": 30656, "title": { "english": "Vagabond", "romaji": "Vagabond", "native": "Vagabond" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30656-9mW113O7rDnA.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx30656-9mW113O7rDnA.png", "medium": "", "color": null }, "genres": ["Action", "Adventure", "Josei"], "averageScore": 91, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" }
@@ -85,9 +84,6 @@ export const mockMediaRows: { title: string; data: Media[] }[] = [
     }
 ];
 
-
-
-// --- NUEVOS DATOS DE PRUEBA PARA LA LISTA DE CAPÍTULOS ---
 export const mockChaptersList: Chapter[] = [
     {
         chapterNumber: "377",
@@ -111,7 +107,6 @@ export const mockChaptersList: Chapter[] = [
             { id: "ifs-375", scanGroup: "Isekai Fanatics", uploadedAt: "hace 2 días", externalUrl: "https://isekaifans.com/berserk/375" }
         ]
     },
-    // Añadimos más capítulos para poder agruparlos en lotes
     ...Array.from({ length: 25 }, (_, i) => ({
         chapterNumber: `${374 - i}`,
         uploads: [
@@ -119,20 +114,77 @@ export const mockChaptersList: Chapter[] = [
         ]
     }))
 ];
-// --- FIN DE LOS NUEVOS DATOS ---
 
+export const mockComments: Comment[] = [
+    {
+        id: 1,
+        user: { username: "MangaFan", avatarUrl: "https://i.pravatar.cc/150?u=MangaFan" },
+        text: "¡Increíble! La calidad del arte de Miura nunca deja de sorprenderme. Este capítulo fue una obra maestra.",
+        createdAt: "hace 2 horas",
+        likes: 15,
+    },
+    {
+        id: 2,
+        user: { username: "SakuraFan", avatarUrl: "https://i.pravatar.cc/150?u=SakuraFan" },
+        text: "No puedo esperar a ver cómo continúa esto. La trama se está poniendo cada vez más intensa.",
+        createdAt: "hace 5 horas",
+        likes: 8,
+    },
+     {
+        id: 3,
+        user: { username: "SeinenEnjoyer", avatarUrl: "https://i.pravatar.cc/150?u=SeinenEnjoyer" },
+        text: "Un desarrollo de personajes impecable como siempre. Guts es simplemente el mejor protagonista.",
+        createdAt: "hace 1 día",
+        likes: 22,
+    }
+];
 
-// Mock para un solo item por ID (AÑADIMOS LA LISTA DE CAPÍTULOS)
+export const mockUserLists: UserList[] = [
+    {
+        id: 'seinen-gems',
+        name: 'Joyas Ocultas del Seinen',
+        description: 'Algunos de los mejores seinens que no todos conocen.',
+        itemCount: 3,
+        coverImages: [
+            dailyRankingMock[6].coverImage.large, // Goodnight Punpun
+            dailyRankingMock[8].coverImage.large, // Vagabond
+            dailyRankingMock[9].coverImage.large, // Vinland Saga
+        ],
+        user: { username: 'Dymedis' }
+    },
+    {
+        id: 'manhwa-action',
+        name: 'Manhwas de Acción Imperdibles',
+        description: 'Adrenalina pura desde Corea.',
+        itemCount: 3,
+        coverImages: [
+            weeklyRankingMock[0].coverImage.large, // Nano Machine
+            weeklyRankingMock[1].coverImage.large, // Pick Me Up
+            weeklyRankingMock[2].coverImage.large, // Omniscient Reader
+        ],
+        user: { username: 'Dymedis' }
+    }
+];
+
+// --- NUEVOS DATOS MOCK PARA LOGROS ---
+export const mockAchievements: Achievement[] = [
+    { id: 'read-10', name: 'Lector Novato', description: 'Lee 10 capítulos en total.', type: 'reading', progress: 10, goal: 10 },
+    { id: 'read-100', name: 'Lector Habitual', description: 'Lee 100 capítulos en total.', type: 'reading', progress: 88, goal: 100 },
+    { id: 'seinen-lover', name: 'Amante del Seinen', description: 'Lee 15 mangas del género Seinen.', type: 'genre', progress: 12, goal: 15 },
+    { id: 'pioneer', name: 'Pionero', description: 'Lee un capítulo menos de una hora después de su publicación.', type: 'community', progress: 0, goal: 1 },
+];
+
+// Mock para un solo item por ID
 export const mockMediaById: Media = {
     id: 30002,
     scanGroupId: "group001",
-    chapterList: mockChaptersList, // <-- AÑADIDO
+    chapterList: mockChaptersList,
+    comments: mockComments,
     title: {
         romaji: "Berserk",
         english: "Berserk",
         native: "ベルセルク"
     },
-    // ... (el resto del objeto mockMediaById se mantiene igual)
     coverImage: {
         extraLarge: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx30002-sCN3X1fW1FBU.jpg",
         large: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30002-sCN3X1fW1FBU.jpg",

@@ -7,17 +7,17 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import MangaCard from '@/components/ui/cards/MangaCard';
-import { dailyRankingMock, weeklyRankingMock, monthlyRankingMock } from '@/mock/mediaData';
-import { Media } from '@/types/AniListResponse';
+import { dailyRankingMock, weeklyRankingMock, monthlyRankingMock, mockUserLists, mockAchievements } from '@/mock/mediaData';
+import { Media, UserList, Achievement } from '@/types/AniListResponse';
 import { useUserPreferences } from '@/context/UserPreferencesContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-
+import CustomListsTab from '@/components/user/CustomListsTab';
+import AchievementsTab from '@/components/user/AchievementsTab'; // <-- AÑADIDO
 
 // --- Iconos Reutilizables ---
 const BookIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>;
 const HeartIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
 const EyeIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
-
 
 // --- Pestaña de Configuración ---
 const SettingsSwitch = ({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: () => void; }) => ( <div className="flex items-center justify-between p-4 rounded-lg bg-gray-700/30"><div_><h4 className="font-semibold text-white">{label}</h4><p className="text-sm text-gray-400">{description}</p></div_><label className="theme-switch"><input type="checkbox" checked={checked} onChange={onChange} /><span className="slider"></span></label></div> );
@@ -34,8 +34,8 @@ const SettingsTab = () => {
                 </div>
             </section>
             <section>
-                 <h2 className="text-2xl font-semibold text-white border-b border-gray-700 pb-2 mb-6">Contenido y Seguridad</h2>
-                 <div className="space-y-4">
+                <h2 className="text-2xl font-semibold text-white border-b border-gray-700 pb-2 mb-6">Contenido y Seguridad</h2>
+                <div className="space-y-4">
                     <SettingsSwitch label="Advertir sobre enlaces externos" description="Muestra un aviso antes de redirigirte a un sitio externo." checked={warnOnExternalLinks} onChange={() => setWarnOnExternalLinks(!warnOnExternalLinks)} />
                     <SettingsSwitch label="Ocultar enlaces externos" description="Esconde los botones que llevan a sitios de lectura externos." checked={hideExternalLinks} onChange={() => setHideExternalLinks(!hideExternalLinks)} />
                     <SettingsSwitch label="Mostrar contenido +18 en el sitio" description="Permite ver mangas y contenido para adultos mientras navegas." checked={showAdultContent} onChange={() => setShowAdultContent(!showAdultContent)} />
@@ -75,7 +75,7 @@ const StatsTab = ({ genreData, scoreData }: { genreData: any[], scoreData: any[]
             </div>
             <div>
                 <h3 className="text-xl font-bold text-white mb-4 text-center">Distribución de Puntuaciones</h3>
-                 <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={scoreData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                         <XAxis dataKey="name" stroke="#888888" fontSize={12} />
                         <YAxis stroke="#888888" fontSize={12} />
@@ -89,10 +89,10 @@ const StatsTab = ({ genreData, scoreData }: { genreData: any[], scoreData: any[]
 );
 
 // --- Tipos y Datos de Prueba ---
-type UserProfile = { username: string; avatarUrl: string; bannerUrl: string; bio: string; pinnedFavorites: Media[]; stats: { mangasLeidos: number; capitulosLeidos: number; meGustaDados: number; }; favorites: Media[]; activity: any[]; genreStats: any[]; scoreStats: any[]; };
+type UserProfile = { username: string; avatarUrl: string; bannerUrl: string; bio: string; pinnedFavorites: Media[]; stats: { mangasLeidos: number; capitulosLeidos: number; meGustaDados: number; }; favorites: Media[]; activity: any[]; genreStats: any[]; scoreStats: any[]; lists: UserList[]; achievements: Achievement[]; };
 const fetchUserDataFromAPI = async (username: string): Promise<UserProfile | null> => {
     const MOCK_USER_DATABASE: { [key: string]: UserProfile } = {
-        Dymedis: { username: "Dymedis", avatarUrl: "https://mangadex.org/covers/8754fb67-d7f1-45f8-ad40-e4c218ba5836/605caded-f8d6-483b-a5e7-bd0ead4244b7.png.512.jpg", bannerUrl: "https://s4.anilist.co/file/anilistcdn/user/banner/b608823-1ZJ0Z6dM224R.jpg", bio: "Amante del seinen y los isekai bien construidos. Siempre en busca de la próxima joya oculta.", pinnedFavorites: dailyRankingMock.slice(0, 3).map(m => ({...m, isPrivate: Math.random() > 0.5})), stats: { mangasLeidos: 124, capitulosLeidos: 4820, meGustaDados: 890 }, favorites: dailyRankingMock.slice(0, 14).map(m => ({...m, isPrivate: Math.random() > 0.5})), activity: [ {id: 1, user: 'Dymedis', action: 'marcó el capítulo 180 de', mediaTitle: 'Berserk', mediaId: 30002, timestamp: 'hace 2 horas', type: 'read'}, {id: 2, user: 'Dymedis', action: 'añadió a favoritos', mediaTitle: 'Vagabond', mediaId: 30656, timestamp: 'hace 5 horas', type: 'favorite'}, {id: 3, user: 'Dymedis', action: 'empezó a seguir a', mediaTitle: 'MangaReaderX', mediaId: 'user001', timestamp: 'hace 1 día', type: 'follow'} ], genreStats: [ { name: 'Acción', value: 40 }, { name: 'Fantasía', value: 30 }, { name: 'Seinen', value: 20 }, { name: 'Drama', value: 10 } ], scoreStats: [ { name: '10', count: 15 }, { name: '9', count: 30 }, { name: '8', count: 45 }, { name: '7', count: 20 }, { name: '6', count: 5 } ] }
+        Dymedis: { username: "Dymedis", avatarUrl: "https://mangadex.org/covers/8754fb67-d7f1-45f8-ad40-e4c218ba5836/605caded-f8d6-483b-a5e7-bd0ead4244b7.png.512.jpg", bannerUrl: "https://s4.anilist.co/file/anilistcdn/user/banner/b608823-1ZJ0Z6dM224R.jpg", bio: "Amante del seinen y los isekai bien construidos. Siempre en busca de la próxima joya oculta.", pinnedFavorites: dailyRankingMock.slice(0, 3).map(m => ({...m, isPrivate: Math.random() > 0.5})), stats: { mangasLeidos: 124, capitulosLeidos: 4820, meGustaDados: 890 }, favorites: dailyRankingMock.slice(0, 14).map(m => ({...m, isPrivate: Math.random() > 0.5})), activity: [ {id: 1, user: 'Dymedis', action: 'marcó el capítulo 180 de', mediaTitle: 'Berserk', mediaId: 30002, timestamp: 'hace 2 horas', type: 'read'}, {id: 2, user: 'Dymedis', action: 'añadió a favoritos', mediaTitle: 'Vagabond', mediaId: 30656, timestamp: 'hace 5 horas', type: 'favorite'}, {id: 3, user: 'Dymedis', action: 'empezó a seguir a', mediaTitle: 'MangaReaderX', mediaId: 'user001', timestamp: 'hace 1 día', type: 'follow'} ], genreStats: [ { name: 'Acción', value: 40 }, { name: 'Fantasía', value: 30 }, { name: 'Seinen', value: 20 }, { name: 'Drama', value: 10 } ], scoreStats: [ { name: '10', count: 15 }, { name: '9', count: 30 }, { name: '8', count: 45 }, { name: '7', count: 20 }, { name: '6', count: 5 } ], lists: mockUserLists, achievements: mockAchievements }
     };
     await new Promise(resolve => setTimeout(resolve, 500));
     // @ts-ignore
@@ -104,7 +104,7 @@ const fetchUserDataFromAPI = async (username: string): Promise<UserProfile | nul
 const UserProfilePage = ({ params }: { params: { username: string } }) => {
     const [userData, setUserData] = useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'favorites' | 'activity' | 'stats' | 'follows' | 'groups' | 'settings'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'favorites' | 'lists' | 'achievements' | 'activity' | 'stats' | 'follows' | 'groups' | 'settings'>('overview');
     const { hideAdultContentOnProfile } = useUserPreferences();
 
     useEffect(() => { const loadUserData = async () => { setIsLoading(true); const data = await fetchUserDataFromAPI(params.username); if (data) { setUserData(data); } else { notFound(); } setIsLoading(false); }; loadUserData(); }, [params.username]);
@@ -112,8 +112,7 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
     const visibleFavorites = useMemo(() => {
         if (!userData) return [];
         if (hideAdultContentOnProfile) {
-            // @ts-ignore
-            return userData.favorites.filter(fav => !fav.isAdult); // Asumiendo que `isAdult` existe
+            return userData.favorites.filter(fav => !fav.isPrivate);
         }
         return userData.favorites;
     }, [userData, hideAdultContentOnProfile]);
@@ -134,16 +133,18 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
                             <p className="text-gray-400 mt-2 max-w-lg">{userData.bio}</p>
                         </div>
                     </div>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-[#201f31] p-4 rounded-lg my-8">
-                         <div className="text-center"><p className="text-2xl font-bold text-[#ffbade]">{userData.stats.mangasLeidos}</p><p className="text-sm text-gray-400">Mangas Leídos</p></div>
-                         <div className="text-center"><p className="text-2xl font-bold text-[#ffbade]">{userData.stats.capitulosLeidos}</p><p className="text-sm text-gray-400">Capítulos Leídos</p></div>
-                         <div className="text-center"><p className="text-2xl font-bold text-[#ffbade]">{userData.stats.meGustaDados}</p><p className="text-sm text-gray-400">Me Gusta</p></div>
-                         <div className="text-center self-center"><button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors">Editar Perfil</button></div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-[#201f31] p-4 rounded-lg my-8">
+                        <div className="text-center"><p className="text-2xl font-bold text-[#ffbade]">{userData.stats.mangasLeidos}</p><p className="text-sm text-gray-400">Mangas Leídos</p></div>
+                        <div className="text-center"><p className="text-2xl font-bold text-[#ffbade]">{userData.stats.capitulosLeidos}</p><p className="text-sm text-gray-400">Capítulos Leídos</p></div>
+                        <div className="text-center"><p className="text-2xl font-bold text-[#ffbade]">{userData.stats.meGustaDados}</p><p className="text-sm text-gray-400">Me Gusta</p></div>
+                        <div className="text-center self-center"><button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors">Editar Perfil</button></div>
                     </div>
                     <div>
                         <div className="flex border-b border-gray-700 mb-6 overflow-x-auto">
                             <button onClick={() => setActiveTab('overview')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 transition-colors flex-shrink-0 ${activeTab === 'overview' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Resumen</button>
                             <button onClick={() => setActiveTab('favorites')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 transition-colors flex-shrink-0 ${activeTab === 'favorites' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Favoritos</button>
+                            <button onClick={() => setActiveTab('lists')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 transition-colors flex-shrink-0 ${activeTab === 'lists' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Listas</button>
+                            <button onClick={() => setActiveTab('achievements')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 transition-colors flex-shrink-0 ${activeTab === 'achievements' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Logros</button>
                             <button onClick={() => setActiveTab('activity')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 transition-colors flex-shrink-0 ${activeTab === 'activity' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Actividad</button>
                             <button onClick={() => setActiveTab('stats')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 transition-colors flex-shrink-0 ${activeTab === 'stats' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Estadísticas</button>
                             <button onClick={() => setActiveTab('follows')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 transition-colors flex-shrink-0 ${activeTab === 'follows' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Siguiendo</button>
@@ -151,8 +152,10 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
                             <button onClick={() => setActiveTab('settings')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 transition-colors flex-shrink-0 ${activeTab === 'settings' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Configuración</button>
                         </div>
                         <div>
-                            {activeTab === 'overview' && (<div className="py-8"><h3 className="text-xl font-bold text-white mb-4">Favoritos Fijados</h3><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-x-4 gap-y-6">{userData.pinnedFavorites.map(manga => (<MangaCard key={manga.id} media={manga} isPrivate={(manga as any).isPrivate && hideAdultContentOnProfile} />))}</div></div>)}
-                            {activeTab === 'favorites' && (<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-x-4 gap-y-6">{visibleFavorites.map(manga => (<MangaCard key={manga.id} media={manga} isPrivate={(manga as any).isPrivate && hideAdultContentOnProfile} />))}</div>)}
+                            {activeTab === 'overview' && (<div className="py-8"><h3 className="text-xl font-bold text-white mb-4">Favoritos Fijados</h3><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-x-4 gap-y-6">{userData.pinnedFavorites.map(manga => (<MangaCard key={manga.id} media={manga} isPrivate={manga.isPrivate && hideAdultContentOnProfile} />))}</div></div>)}
+                            {activeTab === 'favorites' && (<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-x-4 gap-y-6">{visibleFavorites.map(manga => (<MangaCard key={manga.id} media={manga} isPrivate={manga.isPrivate && hideAdultContentOnProfile} />))}</div>)}
+                            {activeTab === 'lists' && <CustomListsTab lists={userData.lists} username={userData.username} />}
+                            {activeTab === 'achievements' && <AchievementsTab achievements={userData.achievements} />}
                             {activeTab === 'activity' && <ActivityFeed activities={userData.activity} />}
                             {activeTab === 'stats' && <StatsTab genreData={userData.genreStats} scoreData={userData.scoreStats} />}
                             {activeTab === 'follows' && <FollowsTab />}

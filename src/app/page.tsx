@@ -1,68 +1,97 @@
+// src/app/page.tsx
 "use client";
-import { useEffect, useState } from "react";
-import { fetchMediaRows, fetchMediaById } from "@/services/fetchAniList";
+import { useEffect, useState, useMemo } from "react";
+import { fetchMediaRows } from "@/services/fetchAniList";
+import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/layout/Navbar";
-// Importamos el nuevo componente para las secciones de cuadrícula
 import MangaSection from "@/components/shared/MangaSection";
 import { Media } from "@/types/AniListResponse";
-import RankingList from '@/components/sidebar/RankingList'; // <-- 1. Importa el Ranking
-import ChatBox from '@/components/sidebar/ChatBox';       // <-- 2. Importa el Chat
+import RankingList from '@/components/sidebar/RankingList';
+import ChatBox from '@/components/sidebar/ChatBox';
+import { MangaCardSkeleton } from "@/components/ui/skeletons/MangaCardSkeleton"; // <-- AÑADIDO
 
 const Home = () => {
-  const [mediaRows, setMediaRows] = useState<
-    { title: string; data: Media[] }[]
-  >([]);
-  // Añadimos un estado de carga para una mejor experiencia de usuario
+  const [mediaRows, setMediaRows] = useState<{ title: string; data: Media[] }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user, isLoggedIn } = useAuth();
+  const [activeTab, setActiveTab] = useState('General');
 
   useEffect(() => {
-    const testApi = async () => {
-      console.log("🚀 Probando la API...");
-      setIsLoading(true); // Inicia la carga
+    const loadInitialData = async () => {
+      setIsLoading(true);
       try {
-        console.log("Fetching media rows...");
+        // Simular un poco más de tiempo de carga para ver los esqueletos
+        await new Promise(resolve => setTimeout(resolve, 1000));
         const fetchedMediaRows = await fetchMediaRows();
-        console.log("✅ Resultado de fetchMediaRows:", fetchedMediaRows);
         setMediaRows(fetchedMediaRows);
-
-        console.log("Fetching media by ID (1535)...");
-        const mediaById = await fetchMediaById(1535);
-        console.log("✅ Resultado de fetchMediaById:", mediaById);
       } catch (error) {
-        console.error("❌ Error probando la API:", error);
+        console.error("❌ Error fetching media rows:", error);
       } finally {
-        setIsLoading(false); // Termina la carga
+        setIsLoading(false);
       }
     };
-
-    testApi();
+    loadInitialData();
   }, []);
+
+  const forYouMedia = useMemo(() => {
+    if (!isLoggedIn || !user?.favorites) return [];
+    const favoriteGenres = new Set(user.favorites.flatMap(fav => fav.genres));
+    const recommended = mediaRows.flatMap(row => row.data).filter(media =>
+      media.genres.some(genre => favoriteGenres.has(genre)) && !user.favorites.some(fav => fav.id === media.id)
+    );
+    return Array.from(new Map(recommended.map(item => [item.id, item])).values());
+  }, [isLoggedIn, user, mediaRows]);
+
+  const renderLoadingSkeleton = () => (
+    <div className="space-y-12">
+        {['Trending', 'Popular'].map(title => (
+             <section key={title}>
+                <div className="flex justify-between items-center mb-4">
+                    <div className="h-8 w-48 bg-gray-700/50 rounded-full"></div>
+                    <div className="h-5 w-24 bg-gray-700/50 rounded-full"></div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-x-4 gap-y-6">
+                    {Array.from({ length: 7 }).map((_, index) => <MangaCardSkeleton key={index} />)}
+                </div>
+            </section>
+        ))}
+    </div>
+  );
+
+  const renderContent = () => {
+    if (activeTab === 'Para Ti') {
+      if (!isLoggedIn) {
+        return <p className="text-gray-400 text-center">Inicia sesión para ver tus recomendaciones personalizadas.</p>
+      }
+      if (forYouMedia.length === 0) {
+        return <p className="text-gray-400 text-center">No tenemos recomendaciones para ti. ¡Añade más mangas a tus favoritos!</p>
+      }
+      return <MangaSection key="for-you" title="Recomendado para Ti" media={forYouMedia} />;
+    }
+
+    return mediaRows.map((row) => (
+      <MangaSection
+        key={row.title}
+        title={row.title}
+        media={row.data}
+      />
+    ));
+  };
 
   return (
     <>
       <Navbar />
-      {/* Contenedor principal que coincide con el layout del HTML */}
       <div className="max-w-screen-3xl px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* ÁREA PRINCIPAL DE CONTENIDO */}
           <main className="w-full lg:w-4/4 space-y-12">
-            {isLoading ? (
-              <p className="text-white text-center">Cargando...</p>
-            ) : (
-              // Mapeamos los datos de la API para crear una sección por cada categoría
-              mediaRows.map((row) => (
-                <MangaSection
-                  key={row.title}
-                  title={row.title}
-                  media={row.data}
-                />
-              ))
-            )}
-          </main>
+            <div className="flex border-b border-gray-700 mb-6">
+                <button onClick={() => setActiveTab('General')} className={`px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'General' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>General</button>
+                <button onClick={() => setActiveTab('Para Ti')} className={`px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'Para Ti' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Para Ti</button>
+            </div>
 
-          {/* BARRA LATERAL (para completar después) */}
+            {isLoading ? renderLoadingSkeleton() : renderContent()}
+          </main>
           <aside className="w-full lg:w-1/4 lg:sticky top-20 self-start space-y-8">
-            {/* Aquí irán los componentes de Ranking y Chat */}
             <RankingList />
             <ChatBox />
           </aside>

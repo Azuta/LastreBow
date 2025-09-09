@@ -1,6 +1,41 @@
 // src/types/AniListResponse.ts
 
-// --- NUEVOS TIPOS AÑADIDOS ---
+// --- Tipos para Logros (Achievements) ---
+export interface Achievement {
+    id: string;
+    name: string;
+    description: string;
+    type: 'reading' | 'genre' | 'community';
+    progress: number;
+    goal: number;
+}
+
+// --- Tipos para Comentarios ---
+export interface CommentUser {
+    username: string;
+    avatarUrl: string;
+}
+
+export interface Comment {
+    id: number;
+    user: CommentUser;
+    text: string;
+    createdAt: string;
+    likes: number;
+}
+
+// --- Tipos para Listas Personalizadas ---
+export interface UserList {
+    id: string;
+    name: string;
+    description: string;
+    itemCount: number;
+    coverImages: string[]; // URLs de las primeras 3 portadas
+    user: {
+        username: string;
+    };
+}
+
 export interface Staff {
   id: number;
   name: string;
@@ -26,26 +61,20 @@ export interface Recommendation {
     media: Media;
 }
 
-// --- ESTRUCTURA DE CAPÍTULOS ACTUALIZADA ---
-
-// Representa una única subida de un capítulo por un scan
 export interface ChapterUpload {
-  id: string; // ID único para la subida, ej: "scan-a-ch-150"
+  id: string;
   scanGroup: string;
   uploadedAt: string;
-  externalUrl?: string; // URL opcional para leer externamente
+  externalUrl?: string;
   notes?: string;
 }
 
-// Representa un número de capítulo que puede contener múltiples subidas
 export interface Chapter {
-  chapterNumber: string; // ej: "150" o "150.5"
+  chapterNumber: string;
   title?: string;
   uploads: ChapterUpload[];
 }
-// --- FIN DE LA ACTUALIZACIÓN DE ESTRUCTURA ---
 
-// --- TIPO PRINCIPAL ACTUALIZADO ---
 export interface Media {
   id: number;
   title: {
@@ -69,16 +98,21 @@ export interface Media {
   status: 'RELEASING' | 'FINISHED' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS';
   format: string;
   type: 'ANIME' | 'MANGA';
-  
+
+  // --- NUEVOS CAMPOS PARA FILTROS AVANZADOS ---
+  tags?: string[];
+  demographic?: 'Shounen' | 'Shoujo' | 'Seinen' | 'Josei' | null;
+
   staff?: Staff[];
   characters?: Character[];
   relations?: Relation[];
   recommendations?: Recommendation[];
   trailer?: { id: string; site: string; } | null;
-  
   chapterList?: Chapter[];
+  comments?: Comment[];
   collaboratorsCount?: number;
   scanGroupId?: string;
+  isPrivate?: boolean;
 }
 
 export interface PageInfo {

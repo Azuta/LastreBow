@@ -9,6 +9,7 @@ import { Media, Chapter, ChapterUpload } from "@/types/AniListResponse";
 import Navbar from "@/components/layout/Navbar";
 import OverviewTab from "@/components/media/OverviewTab";
 import ChaptersTab from "@/components/media/ChaptersTab";
+import CommentsSection from "@/components/media/CommentsSection"; // <-- AÑADIDO
 import { useAuth } from "@/context/AuthContext";
 import ConfirmationModal from "@/components/media/ConfirmationModal";
 
@@ -91,7 +92,7 @@ const ChapterManagementTab = ({ media, existingChapter, onSave, chapterTitle }: 
             setPages((currentPages) => arrayMove(currentPages, oldIndex, newIndex));
         }
     };
-    
+
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formElements = new FormData(e.currentTarget);
@@ -117,7 +118,6 @@ const ChapterManagementTab = ({ media, existingChapter, onSave, chapterTitle }: 
         setIsModalOpen(true);
     };
 
-    // --- FUNCIÓN CORREGIDA ---
     const handleConfirmUpload = async () => {
         if (!chapterNumberInputRef.current?.form) return;
         const form = chapterNumberInputRef.current.form;
@@ -133,26 +133,18 @@ const ChapterManagementTab = ({ media, existingChapter, onSave, chapterTitle }: 
                 method: 'POST',
                 body: apiFormData,
             });
-
-            // Lee la respuesta como texto UNA SOLA VEZ.
             const responseText = await response.text();
-
             if (!response.ok) {
-                // Si la respuesta no es OK, intentamos parsear el texto como JSON para un error detallado.
                 try {
                     const errorResult = JSON.parse(responseText);
                     throw new Error(errorResult.message || `Server responded with status: ${response.status}`);
                 } catch (e) {
-                    // Si no se puede parsear como JSON, es un error HTML.
                     console.error("Server returned non-JSON error response:", responseText);
                     throw new Error(`Server error: ${response.status} ${response.statusText}`);
                 }
             }
-            
-            // Si la respuesta es OK, la parseamos como JSON.
             const result = JSON.parse(responseText);
             onSave(result.chapter, isEditing);
-            
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
             console.error("Error al subir:", errorMessage);
@@ -170,7 +162,7 @@ const ChapterManagementTab = ({ media, existingChapter, onSave, chapterTitle }: 
             <div className="max-w-screen-md mx-auto bg-[#201f31] p-8 rounded-lg">
                 <h3 className="text-2xl font-bold text-white mb-6">{isEditing ? `Editando la subida para el Capítulo ${existingChapter?.id}` : `Subir capítulo para: ${media.title.romaji}`}</h3>
                 <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-                     <div>
+                    <div>
                         <label htmlFor="chapter-number" className="block text-sm font-medium text-gray-300 mb-2">Número de Capítulo</label>
                         <input ref={chapterNumberInputRef} key={existingChapter?.id} type="text" name="chapter-number" defaultValue={existingChapter?.id || ''} placeholder="Ej: 125 o 125.5" className={`w-full bg-gray-700/50 text-white rounded-lg px-4 py-2 border-2 ${chapterNumberError ? 'border-red-500' : 'border-transparent'} focus:ring-2 focus:ring-[#ffbade] focus:border-transparent read-only:bg-gray-800`} readOnly={isEditing} onChange={() => setChapterNumberError('')}/>
                         {chapterNumberError && <p className="text-red-500 text-xs mt-1">{chapterNumberError}</p>}
@@ -219,51 +211,51 @@ const ChapterManagementTab = ({ media, existingChapter, onSave, chapterTitle }: 
     );
 };
 
-// --- Componente principal de la página (sin cambios) ---
+// --- Componente principal de la página (MODIFICADO) ---
 const MediaDetailPage = ({ params }: { params: { id: string } }) => {
     const { id } = use(params);
-    
+
     const [media, setMedia] = useState<Media | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'chapters' | 'overview' | 'manage_chapter'>('chapters');
+    const [activeTab, setActiveTab] = useState<'chapters' | 'overview' | 'comments' | 'manage_chapter'>('chapters'); // <-- AÑADIDO 'comments'
     const [selectedChapter, setSelectedChapter] = useState<ChapterUpload | null>(null);
     const [chapterToEditTitle, setChapterToEditTitle] = useState<string | undefined>(undefined);
     const { user, isLoggedIn, addNotification } = useAuth();
     const router = useRouter();
 
-    const loadMedia = async () => { 
-        setIsLoading(true); 
+    const loadMedia = async () => {
+        setIsLoading(true);
         const mediaData = await fetchMediaById(Number(id));
-        setMedia(mediaData); 
-        setIsLoading(false); 
-    }; 
+        setMedia(mediaData);
+        setIsLoading(false);
+    };
 
-    useEffect(() => { 
+    useEffect(() => {
         setActiveTab('chapters');
-        loadMedia(); 
+        loadMedia();
     }, [id]);
 
     const canManageChapters = isLoggedIn && media?.scanGroupId && user?.scanGroupId === media.scanGroupId;
 
-    const handleEditChapter = (upload: ChapterUpload, chapterNumber: string, title?: string) => { 
-        setSelectedChapter({ ...upload, id: chapterNumber }); 
+    const handleEditChapter = (upload: ChapterUpload, chapterNumber: string, title?: string) => {
+        setSelectedChapter({ ...upload, id: chapterNumber });
         setChapterToEditTitle(title);
-        setActiveTab('manage_chapter'); 
+        setActiveTab('manage_chapter');
     };
     const handleShowUpload = () => {
         setSelectedChapter(null);
         setChapterToEditTitle(undefined);
         setActiveTab('manage_chapter');
     };
-    
+
     const handleSaveChapter = (chapterData: any, isEditing: boolean) => {
         if (!media) return;
-        const message = isEditing 
+        const message = isEditing
             ? `Se actualizó el capítulo ${chapterData.chapterNumber} de "${media.title.romaji}"`
             : `¡Nuevo capítulo! ${chapterData.chapterNumber} de "${media.title.romaji}" ya está disponible`;
 
         addNotification({ message, link: `/media/${media.id}` });
-        
+
         loadMedia().then(() => {
             router.push(`/media/${media.id}?newChapter=${chapterData.chapterNumber}`, { scroll: false });
             setActiveTab('chapters');
@@ -288,6 +280,7 @@ const MediaDetailPage = ({ params }: { params: { id: string } }) => {
                         <div className="flex border-b border-gray-700 mb-6">
                             <button onClick={() => setActiveTab('chapters')} className={`px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'chapters' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Capítulos</button>
                             <button onClick={() => setActiveTab('overview')} className={`px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'overview' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Overview</button>
+                            <button onClick={() => setActiveTab('comments')} className={`px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'comments' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Comentarios</button>
                             {canManageChapters && (
                                 <button onClick={handleShowUpload} className={`px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'manage_chapter' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>
                                     {selectedChapter ? 'Editar Capítulo' : 'Subir Capítulo'}
@@ -296,6 +289,7 @@ const MediaDetailPage = ({ params }: { params: { id: string } }) => {
                         </div>
                         {activeTab === 'overview' && <OverviewTab media={media} />}
                         {activeTab === 'chapters' && <ChaptersTab onEditChapter={canManageChapters ? handleEditChapter : undefined} />}
+                        {activeTab === 'comments' && <CommentsSection comments={media.comments || []} mediaId={media.id} />}
                         {activeTab === 'manage_chapter' && canManageChapters && <ChapterManagementTab media={media} existingChapter={selectedChapter} onSave={handleSaveChapter} chapterTitle={chapterToEditTitle} />}
                     </div>
                 </div>
