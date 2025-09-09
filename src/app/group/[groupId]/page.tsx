@@ -1,7 +1,7 @@
 // src/app/group/[groupId]/page.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use} from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -27,7 +27,7 @@ const MOCK_GROUP_DATA: { [key: string]: ScanGroup } = {
 
 // --- CORRECCIÓN AQUÍ ---
 const GroupPage = ({ params }: { params: { groupId: string } }) => {
-    const { groupId } = params; // Desestructurar el groupId aquí
+    const { groupId } = use(params); // Modified: Used the 'use' hook
     // -------------------
 
     const [groupData, setGroupData] = useState<ScanGroup | null>(null);
