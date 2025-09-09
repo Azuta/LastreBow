@@ -130,3 +130,30 @@ export interface AniListResponse {
     media: Media[];
   };
 }
+
+// --- Tipos para la Gestión de Proyectos ---
+
+export type TaskStatus = 'raw' | 'translating' | 'cleaning' | 'typesetting' | 'quality-check' | 'published';
+
+export const StatusColumns: { [key in TaskStatus]: string } = {
+  raw: 'RAW Adquirido',
+  translating: 'Traducción',
+  cleaning: 'Limpieza',
+  typesetting: 'Typesetting',
+  'quality-check': 'Control de Calidad',
+  published: 'Publicado',
+};
+
+export interface Task {
+  id: string; // "mangaId-chapterNumber"
+  mangaId: number;
+  chapterNumber: string;
+  title: string;
+  coverImage: string;
+  status: TaskStatus;
+  assignedTo?: { username: string; avatarUrl: string }[];
+}
+
+export interface Project extends Media {
+    tasks: Task[];
+}
