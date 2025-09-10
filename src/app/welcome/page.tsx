@@ -1,4 +1,4 @@
-// src/app/welcome/page.tsx
+// azuta/mangauserpage/MangaUserPage-main/src/app/welcome/page.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -20,6 +20,7 @@ const WelcomePage = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
+        // Si no hay un usuario, lo mandamos al login.
         if (!user) {
             router.push('/login');
             return;
@@ -27,6 +28,7 @@ const WelcomePage = () => {
 
         const loadManga = async () => {
             const allMedia = await fetchAllMedia();
+            // Mostramos 14 mangas aleatorios para la selección.
             setPopularManga(allMedia.sort(() => 0.5 - Math.random()).slice(0, 14));
         };
         loadManga();
@@ -58,7 +60,6 @@ const WelcomePage = () => {
     };
     
     const renderStepContent = () => {
-        // ... (el contenido de los pasos no cambia, solo el botón final)
         switch (step) {
             case 1:
                 return (

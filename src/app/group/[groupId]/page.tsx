@@ -114,7 +114,7 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
   const [groupData, setGroupData] = useState<ScanGroup | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("projects");
-  const { user, toggleFollowGroup, isLoggedIn } = useAuth();
+const { profile, followedScanGroups, toggleFollowGroup, isLoggedIn } = useAuth();
 
   useEffect(() => {
     const loadGroupData = async () => {
@@ -127,8 +127,8 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
     loadGroupData();
   }, [groupId]);
 
-  const isFollowing = user?.followedScanGroups.includes(groupId) || false;
-  const isMember = user?.scanGroupId === groupId;
+const isFollowing = followedScanGroups.includes(groupId);
+const isMember = profile?.scan_group_id === groupId;
 
   if (isLoading || !groupData) {
     return (
@@ -216,7 +216,9 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
               {activeTab === "recruitment" && <RecruitmentTab />}
               {activeTab === "community" && (
                 <div className="max-w-screen-md mx-auto py-8">
-                  <CommentsSection comments={[]} mediaId={0} />
+                  <CommentsSection initialComments={[]} mediaId={0} />
+
+
                 </div>
               )}
               {activeTab === "members" && (

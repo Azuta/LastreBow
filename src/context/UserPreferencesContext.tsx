@@ -1,3 +1,4 @@
+// azuta/mangauserpage/MangaUserPage-main/src/context/UserPreferencesContext.tsx
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -32,7 +33,7 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
   const [warnOnExternalLinks, setWarnOnExternalLinks] = useState<boolean>(true);
   const [hideExternalLinks, setHideExternalLinks] = useState<boolean>(false);
   // --- NUEVOS ESTADOS ---
-  const [showAdultContent, setShowAdultContent] = useState<boolean>(true);
+  const [showAdultContent, setShowAdultContent] = useState<boolean>(false);
   const [hideAdultContentOnProfile, setHideAdultContentOnProfile] = useState<boolean>(false);
   // --------------------
   const [isHydrated, setIsHydrated] = useState(false);
@@ -51,7 +52,6 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
       const savedHide = localStorage.getItem('hideExternalLinks');
       if (savedHide) setHideExternalLinks(JSON.parse(savedHide));
 
-      // Cargar nuevas preferencias
       const savedShowAdult = localStorage.getItem('showAdultContent');
       if (savedShowAdult) setShowAdultContent(JSON.parse(savedShowAdult));
       
@@ -68,7 +68,6 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
   useEffect(() => { if (isHydrated) localStorage.setItem('paginationStyle', paginationStyle); }, [paginationStyle, isHydrated]);
   useEffect(() => { if (isHydrated) localStorage.setItem('warnOnExternalLinks', JSON.stringify(warnOnExternalLinks)); }, [warnOnExternalLinks, isHydrated]);
   useEffect(() => { if (isHydrated) localStorage.setItem('hideExternalLinks', JSON.stringify(hideExternalLinks)); }, [hideExternalLinks, isHydrated]);
-  // Guardar nuevas preferencias
   useEffect(() => { if (isHydrated) localStorage.setItem('showAdultContent', JSON.stringify(showAdultContent)); }, [showAdultContent, isHydrated]);
   useEffect(() => { if (isHydrated) localStorage.setItem('hideAdultContentOnProfile', JSON.stringify(hideAdultContentOnProfile)); }, [hideAdultContentOnProfile, isHydrated]);
 

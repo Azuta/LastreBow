@@ -1,4 +1,4 @@
-// src/app/register/page.tsx
+// azuta/mangauserpage/MangaUserPage-main/src/app/register/page.tsx
 "use client";
 
 import { useState } from 'react';
@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/layout/Navbar';
 import PasswordStrengthMeter from '@/components/auth/PasswordStrengthMeter';
+import { useRouter } from 'next/navigation'; // <-- Importa useRouter
 
 const RegisterPage = () => {
   const [email, setEmail] = useState('');
@@ -13,9 +14,8 @@ const RegisterPage = () => {
   const [username, setUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  // --- NUEVO ESTADO ---
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const { signUpWithEmail } = useAuth();
+  const router = useRouter(); // <-- Obtén la instancia del router
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,32 +25,16 @@ const RegisterPage = () => {
     const success = await signUpWithEmail(username, email, password);
 
     if (success) {
-      // --- CAMBIO DE LÓGICA ---
-      // En lugar de redirigir, mostramos un mensaje de éxito.
-      setIsSubmitted(true);
+      // Al tener éxito, el listener de AuthContext se activará y
+      // redirigirá al usuario a /welcome si es necesario.
+      // Nosotros solo lo sacamos de la página de registro.
+      router.push('/');
     } else {
+      // El error específico ya se muestra con addToast, pero mantenemos un genérico.
       setError('No se pudo crear la cuenta. El email o usuario puede que ya exista.');
     }
     setIsLoading(false);
   };
-  
-  // --- NUEVO COMPONENTE DE VISTA DE ÉXITO ---
-  if (isSubmitted) {
-    return (
-        <>
-            <Navbar />
-            <div className="min-h-screen flex items-center justify-center bg-[#1a1a24] p-4">
-                <div className="w-full max-w-md bg-[#201f31] p-8 rounded-lg shadow-lg text-center">
-                    <h2 className="text-3xl font-bold text-white mb-4">¡Revisa tu correo!</h2>
-                    <p className="text-gray-400">
-                        Hemos enviado un enlace de confirmación a <strong className="text-white">{email}</strong>.
-                        Por favor, haz clic en el enlace para activar tu cuenta e iniciar sesión.
-                    </p>
-                </div>
-            </div>
-        </>
-    );
-  }
 
   return (
     <>
