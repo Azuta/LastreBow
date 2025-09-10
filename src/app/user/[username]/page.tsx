@@ -1,14 +1,15 @@
 // azuta/mangauserpage/MangaUserPage-main/src/app/user/[username]/page.tsx
 "use client";
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useCallback } from 'react';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import MangaCard from '@/components/ui/cards/MangaCard';
 import CustomListsTab from '@/components/user/CustomListsTab';
 import OverviewTab from '@/components/user/OverviewTab';
-import SettingsTab from '@/components/user/SettingsTab'; // <-- NUEVO
+import SettingsTab from '@/components/user/SettingsTab';
+import ReviewsTab from '@/components/user/ReviewsTab';
 import { Media, UserList } from '@/types/AniListResponse';
 import { createClient } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
@@ -23,7 +24,7 @@ interface UserProfile {
     favorites: Media[];
     lists: UserList[];
     profile_comments: any[];
-    reviews: any[]; // <-- NUEVO
+    reviews: any[];
 }
 
 const UserProfilePage = ({ params }: { params: { username: string } }) => {
@@ -35,35 +36,34 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
 
     const isOwnProfile = loggedInUserProfile?.username === username;
 
-    useEffect(() => {
-        const fetchUserData = async () => {
-            setIsLoading(true);
+    const fetchUserData = useCallback(async () => {
+        setIsLoading(true);
 
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles').select('*').eq('username', username).single();
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles').select('*').eq('username', username).single();
 
-            if (profileError || !profile) notFound();
+        if (profileError || !profile) notFound();
 
-            const { data: favorites } = await supabase.from('user_favorites').select('media:media_id (*)').eq('user_id', profile.id);
-            const { data: lists } = await supabase.from('user_lists').select('*').eq('user_id', profile.id);
-            const { data: comments } = await supabase.from('profile_comments').select('*, author:profiles!author_id(*)').eq('profile_id', profile.id).order('created_at', { ascending: false });
-            
-            // --- NUEVO: Cargar reseñas del usuario ---
-            const { data: reviews } = await supabase.from('reviews').select('*, media:media_id(*)').eq('user_id', profile.id).order('created_at', { ascending: false });
+        const { data: favorites } = await supabase.from('user_favorites').select('media:media_id (*)').eq('user_id', profile.id);
+        const { data: lists } = await supabase.from('user_lists').select('*').eq('user_id', profile.id);
+        const { data: comments } = await supabase.from('profile_comments').select('*, author:profiles!author_id(*)').eq('profile_id', profile.id).order('created_at', { ascending: false });
+        
+        const { data: reviews } = await supabase.from('reviews').select('*, media:media_id(*)').eq('user_id', profile.id).order('created_at', { ascending: false });
 
-            setUserData({
-                ...profile,
-                favorites: favorites?.map(f => f.media as Media) || [],
-                lists: lists || [],
-                profile_comments: comments || [],
-                reviews: reviews || [],
-            });
+        setUserData({
+            ...profile,
+            favorites: favorites?.map(f => f.media as Media) || [],
+            lists: lists || [],
+            profile_comments: comments || [],
+            reviews: reviews || [],
+        });
 
-            setIsLoading(false);
-        };
-
-        fetchUserData();
+        setIsLoading(false);
     }, [username]);
+
+    useEffect(() => {
+        fetchUserData();
+    }, [fetchUserData]);
 
     if (isLoading) return (<><Navbar /><div className="text-center py-20 text-white">Cargando perfil...</div></>);
     if (!userData) return notFound();
@@ -95,10 +95,27 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
                            )}
                         </div>
                         <div>
-                            {activeTab === 'overview' && <OverviewTab userId={userData.id} username={userData.username} recentFavorites={userData.favorites.slice(0, 7)} initialComments={userData.profile_comments}/>}
+                            {activeTab === 'overview' && (
+                                <OverviewTab
+                                    userId={userData.id}
+                                    username={userData.username}
+                                    recentFavorites={userData.favorites.slice(0, 7)}
+                                    initialComments={userData.profile_comments}
+                                    totalFavorites={userData.favorites.length}
+                                    totalLists={userData.lists.length}
+                                    totalReviews={userData.reviews.length}
+                                />
+                            )}
                             {activeTab === 'favorites' && (<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-x-4 gap-y-6 py-8">{userData.favorites.map(manga => <MangaCard key={manga.id} media={manga} />)}</div>)}
                             {activeTab === 'lists' && <CustomListsTab lists={userData.lists} username={userData.username} />}
-                            {activeTab === 'reviews' && <div className="text-center py-20 text-gray-400">La sección de reseñas estará disponible próximamente.</div>}
+                            {activeTab === 'reviews' && (
+                                <ReviewsTab
+                                    reviews={userData.reviews}
+                                    username={userData.username}
+                                    isOwnProfile={isOwnProfile}
+                                    onReviewAdded={fetchUserData} // Pasamos la función para refrescar
+                                />
+                            )}
                             {activeTab === 'history' && <div className="text-center py-20 text-gray-400">El historial de lectura estará disponible próximamente.</div>}
                             {activeTab === 'settings' && isOwnProfile && <SettingsTab />}
                         </div>

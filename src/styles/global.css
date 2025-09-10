@@ -5,6 +5,35 @@ body {
     background-color: #1a1a24;
 }
 
+/* Estilos para el scrollbar */
+/* Para navegadores basados en Webkit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px; /* Ancho del scrollbar vertical */
+  height: 8px; /* Altura del scrollbar horizontal */
+}
+
+::-webkit-scrollbar-track {
+  background: #2b2a3d; /* Color del fondo del track del scrollbar */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ffbade; /* Color del "pulgar" del scrollbar */
+  border-radius: 10px;
+  border: 2px solid #2b2a3d; /* Borde alrededor del pulgar */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e0a3c7; /* Color del pulgar al pasar el ratón */
+}
+
+/* Para Firefox */
+* {
+  scrollbar-width: thin; /* Ancho del scrollbar (auto, thin, none) */
+  scrollbar-color: #ffbade #2b2a3d; /* color-thumb color-track */
+}
+
+
 .day-mode {
     background-color: #f3f4f6;
 }
@@ -38,3 +67,39 @@ body {
 }
 input:checked + .slider { background-color: #ffbade; }
 input:checked + .slider:before { transform: translateX(24px); }
+
+/* Estilos para el contenido renderizado por Tiptap */
+.prose-invert {
+    color: #d1d5db; /* Color de texto por defecto */
+}
+.prose-invert a {
+    color: #ffbade;
+}
+.prose-invert blockquote {
+    border-left-color: #4b5563;
+    color: #9ca3af;
+}
+.prose-invert strong {
+    color: #ffffff;
+}
+
+/* --- Estilos para Spoilers --- */
+[data-spoiler] {
+    background-color: #374151; /* Un gris oscuro */
+    color: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    padding: 0 4px;
+    border-radius: 4px;
+}
+
+[data-spoiler]:hover {
+    background-color: #4b5563;
+}
+
+/* Clase que se añadirá con JS para revelar los spoilers */
+.spoilers-revealed [data-spoiler] {
+    background-color: transparent;
+    color: inherit;
+    cursor: default;
+}
