@@ -17,7 +17,6 @@ const ExpandableGrid = ({
     initialCount?: number;
     gridClass?: string;
 }) => {
-    // --- LÓGICA DE CONDICIÓN: Si no hay items, no se muestra nada (ni el título) ---
     if (!items || items.length === 0) return null;
 
     const [showAll, setShowAll] = useState(false);
@@ -30,7 +29,6 @@ const ExpandableGrid = ({
             <div className={`grid ${gridClass} gap-4`}>
                 {visibleItems.map(item => renderItem(item))}
             </div>
-            {/* --- LÓGICA "MOSTRAR MÁS": El botón '...' solo aparece si hay más items que el conteo inicial --- */}
             {items.length > initialCount && !showAll && (
                 <div className="text-center mt-4">
                     <button onClick={() => setShowAll(true)} className="text-2xl text-gray-400 hover:text-white tracking-widest leading-none">...</button>
@@ -50,10 +48,11 @@ const OverviewTab = ({ media }: { media: Media }) => {
                 items={media.staff || []}
                 initialCount={5}
                 renderItem={(staff) => (
+                    // --- CORRECCIÓN AQUÍ ---
                     <div key={staff.id} className="flex items-center gap-3 bg-[#201f31] p-2 rounded-lg">
-                        <img src={staff.image} alt={staff.name} className="w-12 h-12 rounded-full object-cover flex-shrink-0"/>
+                        <img src={staff.image?.large} alt={staff.name?.full} className="w-12 h-12 rounded-full object-cover flex-shrink-0"/>
                         <div>
-                            <p className="font-semibold text-sm text-white">{staff.name}</p>
+                            <p className="font-semibold text-sm text-white">{staff.name?.full}</p>
                             <p className="text-xs text-gray-400">{staff.role}</p>
                         </div>
                     </div>
@@ -66,10 +65,11 @@ const OverviewTab = ({ media }: { media: Media }) => {
                 items={media.characters || []}
                 initialCount={5}
                 renderItem={(char) => (
+                    // --- CORRECIÓN AQUÍ ---
                     <div key={char.id} className="flex items-center gap-3 bg-[#201f31] p-2 rounded-lg">
-                        <img src={char.image} alt={char.name} className="w-12 h-12 rounded-full object-cover flex-shrink-0"/>
+                        <img src={char.image?.large} alt={char.name?.full} className="w-12 h-12 rounded-full object-cover flex-shrink-0"/>
                         <div>
-                            <p className="font-semibold text-sm text-white">{char.name}</p>
+                            <p className="font-semibold text-sm text-white">{char.name?.full}</p>
                             <p className="text-xs text-gray-400">{char.role}</p>
                         </div>
                     </div>
@@ -80,15 +80,15 @@ const OverviewTab = ({ media }: { media: Media }) => {
             <ExpandableGrid
                 title="Relacionados"
                 items={media.relations || []}
-                initialCount={4} // Un número par se ve mejor en esta cuadrícula
+                initialCount={4}
                 gridClass="grid-cols-1 md:grid-cols-2"
                 renderItem={(relation) => (
-                     <Link href={`/media/${relation.media.id}`} key={relation.id} className="flex items-center gap-4 bg-[#201f31] p-3 rounded-lg hover:bg-gray-700/50 transition-colors">
-                        <img src={relation.media.coverImage.large} alt={relation.media.title.romaji} className="w-16 h-24 object-cover rounded"/>
+                     <Link href={`/media/${relation.id}`} key={relation.id} className="flex items-center gap-4 bg-[#201f31] p-3 rounded-lg hover:bg-gray-700/50 transition-colors">
+                        <img src={relation.coverImage?.large} alt={relation.title?.romaji} className="w-16 h-24 object-cover rounded"/>
                         <div>
-                            <p className="text-xs text-gray-400">{relation.relationType.replace('_', ' ')}</p>
-                            <p className="font-semibold text-white">{relation.media.title.english || relation.media.title.romaji}</p>
-                            <p className="text-xs text-gray-400">{relation.media.format} - {relation.media.status}</p>
+                            <p className="text-xs text-gray-400">{relation.relationType?.replace('_', ' ')}</p>
+                            <p className="font-semibold text-white">{relation.title?.english || relation.title?.romaji}</p>
+                            <p className="text-xs text-gray-400">{relation.format} - {relation.status}</p>
                         </div>
                     </Link>
                 )}
@@ -103,26 +103,8 @@ const OverviewTab = ({ media }: { media: Media }) => {
                     </div>
                 </div>
             )}
-
-            {/* Sección de Recomendaciones */}
-            <ExpandableGrid
-                title="Recomendaciones"
-                items={media.recommendations || []}
-                initialCount={5}
-                gridClass="grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6"
-                renderItem={(rec) => (
-                    <Link href={`/media/${rec.media.id}`} key={rec.id} className="block group">
-                        <div className="relative aspect-[2/3] w-full">
-                           <img src={rec.media.coverImage.large} alt={rec.media.title.romaji} className="w-full h-full object-cover rounded-lg transition-transform group-hover:scale-105"/>
-                        </div>
-                        <p className="mt-2 text-sm font-semibold text-white truncate group-hover:text-[#ffbade]">{rec.media.title.english || rec.media.title.romaji}</p>
-                        <p className="text-xs text-gray-400">{rec.media.format} - {rec.media.status}</p>
-                    </Link>
-                )}
-            />
         </div>
     );
 };
 
 export default OverviewTab;
-
