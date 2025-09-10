@@ -128,13 +128,13 @@ const ChapterManagementTab = ({ media, onSave }: { media: Media; onSave: () => v
 
 const MediaDetailPage = ({ params }: { params: { id: string } }) => {
     // --- LÍNEA CORREGIDA ---
-    const { id } = use(params);
+    const { id } = use(params); // <-- CORRECCIÓN AQUÍ
     // -------------------------
     const [media, setMedia] = useState<Media | null>(null);
     const [chapters, setChapters] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'chapters' | 'overview' | 'comments' | 'manage_chapter'>('chapters');
-    const { isLoggedIn } = useAuth();
+    const { isLoggedIn, profile } = useAuth(); // profile se usa implicitamente en canManageChapters
     const supabase = createClient();
 
     const loadMediaAndChapters = async () => {

@@ -3,8 +3,14 @@
 
 import Navbar from '@/components/layout/Navbar';
 import { useUserPreferences } from '@/context/UserPreferencesContext';
+import { useAuth } from '@/context/AuthContext'; // Para los toasts
 
-// Componente reutilizable para un switch de configuración
+// --- Iconos para el botón de guardar ---
+const SaveIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
+const UndoIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"></path><path d="M3 13h6a2 2 0 1 0 0-4H3"></path></svg>;
+
+
+// --- Componentes reutilizables (sin cambios) ---
 const SettingsSwitch = ({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: () => void; }) => (
     <div className="flex items-center justify-between p-4 rounded-lg bg-gray-700/30">
         <div>
@@ -17,8 +23,6 @@ const SettingsSwitch = ({ label, description, checked, onChange }: { label: stri
         </label>
     </div>
 );
-
-// Componente reutilizable para una opción con botones
 const SettingsOption = ({ label, description, value, options, onChange }: { label: string; description: string; value: string; options: string[]; onChange: (value: any) => void; }) => (
      <div className="p-4 rounded-lg bg-gray-700/30">
         <div>
@@ -39,65 +43,120 @@ const SettingsOption = ({ label, description, value, options, onChange }: { labe
     </div>
 );
 
-
+// --- Componente principal de la página ---
 const SettingsPage = () => {
-    const {
-        viewMode,
-        paginationStyle,
-        warnOnExternalLinks,
-        hideExternalLinks,
-        toggleViewMode,
-        togglePaginationStyle,
-        setWarnOnExternalLinks,
-        setHideExternalLinks,
-    } = useUserPreferences();
+    const { preferences, setPreference, savePreferences, isDirty, resetPreferences } = useUserPreferences();
+    const { addToast } = useAuth();
+
+    const handleSave = () => {
+        savePreferences();
+        addToast('¡Configuración guardada!', 'success');
+    };
+    
+    const handleDiscard = () => {
+        resetPreferences();
+        addToast('Cambios descartados.', 'info');
+    };
 
     return (
         <>
             <Navbar />
             <main className="max-w-screen-lg mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <h1 className="text-4xl font-bold text-white mb-8">Configuración</h1>
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-4xl font-bold text-white">Configuración</h1>
+                    {/* --- Botón de Guardar/Descartar --- */}
+                    {isDirty && (
+                        <div className="flex gap-4">
+                            <button 
+                                onClick={handleDiscard}
+                                className="flex items-center gap-2 px-4 py-2 bg-gray-600/80 text-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors"
+                            >
+                                <UndoIcon />
+                                Descartar
+                            </button>
+                            <button 
+                                onClick={handleSave}
+                                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors"
+                            >
+                                <SaveIcon />
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    )}
+                </div>
 
                 <div className="space-y-10">
-                    {/* Sección de Experiencia de Lectura */}
+                    {/* Sección de Experiencia de Navegación */}
                     <section>
                         <h2 className="text-2xl font-semibold text-white border-b border-gray-700 pb-2 mb-6">Experiencia de Navegación</h2>
                         <div className="space-y-4">
                             <SettingsOption
                                 label="Modo de Vista"
                                 description="Elige cómo se muestran las listas de mangas al explorar."
-                                value={viewMode}
+                                value={preferences.viewMode}
                                 options={['grid', 'list']}
-                                onChange={toggleViewMode}
+                                onChange={() => setPreference('viewMode', preferences.viewMode === 'grid' ? 'list' : 'grid')}
                             />
                             <SettingsOption
                                 label="Estilo de Paginación"
                                 description="Selecciona entre páginas numeradas o scroll infinito."
-                                value={paginationStyle}
+                                value={preferences.paginationStyle}
                                 options={['pagination', 'infinite']}
-                                onChange={togglePaginationStyle}
+                                onChange={() => setPreference('paginationStyle', preferences.paginationStyle === 'pagination' ? 'infinite' : 'pagination')}
                             />
                         </div>
                     </section>
                     
-                    {/* Sección de Contenido */}
+                    {/* Sección de Contenido y Seguridad */}
                     <section>
                          <h2 className="text-2xl font-semibold text-white border-b border-gray-700 pb-2 mb-6">Contenido y Seguridad</h2>
                          <div className="space-y-4">
                             <SettingsSwitch
                                 label="Advertir sobre enlaces externos"
                                 description="Muestra un aviso antes de redirigirte a un sitio externo para leer."
-                                checked={warnOnExternalLinks}
-                                onChange={() => setWarnOnExternalLinks(!warnOnExternalLinks)}
+                                checked={preferences.warnOnExternalLinks}
+                                onChange={() => setPreference('warnOnExternalLinks', !preferences.warnOnExternalLinks)}
                             />
                              <SettingsSwitch
                                 label="Ocultar todos los enlaces externos"
                                 description="Esconde completamente los botones que llevan a sitios de lectura externos."
-                                checked={hideExternalLinks}
-                                onChange={() => setHideExternalLinks(!hideExternalLinks)}
+                                checked={preferences.hideExternalLinks}
+                                onChange={() => setPreference('hideExternalLinks', !preferences.hideExternalLinks)}
+                            />
+                             <SettingsSwitch
+                                label="Mostrar contenido para adultos (+18)"
+                                description="Permite la visualización de mangas catalogados como para adultos."
+                                checked={preferences.showAdultContent}
+                                onChange={() => setPreference('showAdultContent', !preferences.showAdultContent)}
                             />
                         </div>
                     </section>
+
+                     {/* --- Nueva Sección de Privacidad y Notificaciones --- */}
+                    <section>
+                        <h2 className="text-2xl font-semibold text-white border-b border-gray-700 pb-2 mb-6">Privacidad y Notificaciones</h2>
+                        <div className="space-y-4">
+                            <SettingsSwitch
+                                label="Perfil Privado"
+                                description="Solo los usuarios que apruebes podrán ver tu perfil y actividad."
+                                checked={preferences.profileIsPrivate}
+                                onChange={() => setPreference('profileIsPrivate', !preferences.profileIsPrivate)}
+                            />
+                            <SettingsSwitch
+                                label="Ocultar contenido +18 en mi perfil"
+                                description="Aunque tengas activado ver contenido adulto, este no aparecerá en tu perfil público."
+                                checked={preferences.hideAdultContentOnProfile}
+                                onChange={() => setPreference('hideAdultContentOnProfile', !preferences.hideAdultContentOnProfile)}
+                            />
+                            <SettingsSwitch
+                                label="Recibir notificaciones por correo"
+                                description="Recibe un email cuando haya actividad relevante (nuevos capítulos, respuestas, etc.)."
+                                checked={preferences.notifyByEmail}
+                                onChange={() => setPreference('notifyByEmail', !preferences.notifyByEmail)}
+                            />
+                        </div>
+                    </section>
+
                 </div>
             </main>
         </>

@@ -6,78 +6,82 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 type ViewMode = 'grid' | 'list';
 type PaginationStyle = 'pagination' | 'infinite';
 
-interface UserPreferencesContextType {
+// --- NUEVO TIPO PARA LAS PREFERENCIAS ---
+export interface UserPreferences {
   viewMode: ViewMode;
   paginationStyle: PaginationStyle;
   warnOnExternalLinks: boolean;
   hideExternalLinks: boolean;
-  // --- NUEVAS OPCIONES DE PRIVACIDAD ---
   showAdultContent: boolean;
   hideAdultContentOnProfile: boolean;
-  // ------------------------------------
-  toggleViewMode: () => void;
-  togglePaginationStyle: () => void;
-  setWarnOnExternalLinks: (value: boolean) => void;
-  setHideExternalLinks: (value: boolean) => void;
-  // --- NUEVOS SETTERS ---
-  setShowAdultContent: (value: boolean) => void;
-  setHideAdultContentOnProfile: (value: boolean) => void;
-  // --------------------
+  profileIsPrivate: boolean; // <-- Nueva
+  notifyByEmail: boolean;    // <-- Nueva
+}
+
+interface UserPreferencesContextType {
+  preferences: UserPreferences;
+  setPreference: <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => void;
+  savePreferences: () => void; // <-- Nueva función para guardar
+  isDirty: boolean; // <-- Nuevo estado para saber si hay cambios sin guardar
+  resetPreferences: () => void; // <-- Para descartar cambios
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | undefined>(undefined);
 
 export const UserPreferencesProvider = ({ children }: { children: ReactNode }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [paginationStyle, setPaginationStyle] = useState<PaginationStyle>('pagination');
-  const [warnOnExternalLinks, setWarnOnExternalLinks] = useState<boolean>(true);
-  const [hideExternalLinks, setHideExternalLinks] = useState<boolean>(false);
-  // --- NUEVOS ESTADOS ---
-  const [showAdultContent, setShowAdultContent] = useState<boolean>(false);
-  const [hideAdultContentOnProfile, setHideAdultContentOnProfile] = useState<boolean>(false);
-  // --------------------
+  const [preferences, setPreferences] = useState<UserPreferences>({
+    viewMode: 'grid',
+    paginationStyle: 'pagination',
+    warnOnExternalLinks: true,
+    hideExternalLinks: false,
+    showAdultContent: false,
+    hideAdultContentOnProfile: false,
+    profileIsPrivate: false,
+    notifyByEmail: true,
+  });
+  
+  const [initialPreferences, setInitialPreferences] = useState<UserPreferences>(preferences);
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     try {
-      const savedViewMode = localStorage.getItem('viewMode') as ViewMode;
-      if (savedViewMode) setViewMode(savedViewMode);
-
-      const savedPaginationStyle = localStorage.getItem('paginationStyle') as PaginationStyle;
-      if (savedPaginationStyle) setPaginationStyle(savedPaginationStyle);
-      
-      const savedWarn = localStorage.getItem('warnOnExternalLinks');
-      if (savedWarn) setWarnOnExternalLinks(JSON.parse(savedWarn));
-      
-      const savedHide = localStorage.getItem('hideExternalLinks');
-      if (savedHide) setHideExternalLinks(JSON.parse(savedHide));
-
-      const savedShowAdult = localStorage.getItem('showAdultContent');
-      if (savedShowAdult) setShowAdultContent(JSON.parse(savedShowAdult));
-      
-      const savedHideAdultProfile = localStorage.getItem('hideAdultContentOnProfile');
-      if (savedHideAdultProfile) setHideAdultContentOnProfile(JSON.parse(savedHideAdultProfile));
-
+      const savedPrefs = localStorage.getItem('userPreferences');
+      if (savedPrefs) {
+        const parsedPrefs = JSON.parse(savedPrefs);
+        setPreferences(currentPrefs => ({ ...currentPrefs, ...parsedPrefs }));
+        setInitialPreferences(currentPrefs => ({ ...currentPrefs, ...parsedPrefs }));
+      }
     } catch (error) {
       console.error("Error al leer localStorage", error);
     }
     setIsHydrated(true);
   }, []);
+  
+  const setPreference = <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
+    setPreferences(prev => ({ ...prev, [key]: value }));
+  };
+  
+  const savePreferences = () => {
+    if (isHydrated) {
+      localStorage.setItem('userPreferences', JSON.stringify(preferences));
+      setInitialPreferences(preferences); // Actualiza el estado inicial para que isDirty sea false
+      // Aquí también llamarías a tu API para guardar en la base de datos
+      console.log('Preferencias guardadas:', preferences);
+    }
+  };
+  
+  const resetPreferences = () => {
+    setPreferences(initialPreferences);
+  };
 
-  useEffect(() => { if (isHydrated) localStorage.setItem('viewMode', viewMode); }, [viewMode, isHydrated]);
-  useEffect(() => { if (isHydrated) localStorage.setItem('paginationStyle', paginationStyle); }, [paginationStyle, isHydrated]);
-  useEffect(() => { if (isHydrated) localStorage.setItem('warnOnExternalLinks', JSON.stringify(warnOnExternalLinks)); }, [warnOnExternalLinks, isHydrated]);
-  useEffect(() => { if (isHydrated) localStorage.setItem('hideExternalLinks', JSON.stringify(hideExternalLinks)); }, [hideExternalLinks, isHydrated]);
-  useEffect(() => { if (isHydrated) localStorage.setItem('showAdultContent', JSON.stringify(showAdultContent)); }, [showAdultContent, isHydrated]);
-  useEffect(() => { if (isHydrated) localStorage.setItem('hideAdultContentOnProfile', JSON.stringify(hideAdultContentOnProfile)); }, [hideAdultContentOnProfile, isHydrated]);
-
-
-  const toggleViewMode = () => setViewMode(prev => (prev === 'grid' ? 'list' : 'grid'));
-  const togglePaginationStyle = () => setPaginationStyle(prev => (prev === 'pagination' ? 'infinite' : 'pagination'));
+  const isDirty = JSON.stringify(preferences) !== JSON.stringify(initialPreferences);
 
   const value = { 
-    viewMode, paginationStyle, warnOnExternalLinks, hideExternalLinks, showAdultContent, hideAdultContentOnProfile,
-    toggleViewMode, togglePaginationStyle, setWarnOnExternalLinks, setHideExternalLinks, setShowAdultContent, setHideAdultContentOnProfile
+    preferences, 
+    setPreference,
+    savePreferences,
+    isDirty,
+    resetPreferences,
   };
 
   return (

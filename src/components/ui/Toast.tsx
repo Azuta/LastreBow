@@ -4,10 +4,10 @@
 import { useEffect } from 'react';
 
 export interface ToastProps {
-  id: number;
+  id: string | number; // <-- CAMBIADO DE number A string | number
   message: string;
   type: 'success' | 'error' | 'info';
-  onDismiss: (id: number) => void;
+  onDismiss: (id: string | number) => void; // <-- CAMBIADO
 }
 
 const toastColors = {
@@ -39,7 +39,7 @@ const Toast = ({ id, message, type, onDismiss }: ToastProps) => {
   );
 };
 
-export const ToastContainer = ({ toasts, onDismiss }: { toasts: Omit<ToastProps, 'onDismiss'>[]; onDismiss: (id: number) => void; }) => {
+export const ToastContainer = ({ toasts, onDismiss }: { toasts: Omit<ToastProps, 'onDismiss'>[]; onDismiss: (id: string | number) => void; }) => {
   return (
     <div className="fixed bottom-5 right-5 z-[100] space-y-3">
       {toasts.map((toast) => (

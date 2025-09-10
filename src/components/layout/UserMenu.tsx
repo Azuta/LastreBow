@@ -32,7 +32,8 @@ const UserMenu = () => {
       
       <hr className="border-gray-600 my-2" />
 
-      <Link href="/settings" className="flex items-center gap-2 px-2 py-2 hover:bg-gray-700 rounded text-txnav">
+      {/* --- LÍNEA MODIFICADA --- */}
+      <Link href={`/user/${profile.username}?tab=settings`} className="flex items-center gap-2 px-2 py-2 hover:bg-gray-700 rounded text-txnav">
           <span>⚙️</span> Configuración
       </Link>
       <button onClick={logout} className="flex items-center gap-2 px-2 py-2 hover:bg-red-800 text-red-400 rounded w-full text-left">
