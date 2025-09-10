@@ -131,11 +131,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const updateUserProfile = async (updates: ProfileUpdate): Promise<Profile | null> => {
         if (!user) return null;
-        const { data, error } = await supabase.from('profiles').update(updates).eq('id', user.id).select().single();
+        const { data, error } = await supabase
+            .from('profiles')
+            .update(updates)
+            .eq('id', user.id)
+            .select()
+            .single();
+            
         if (error) {
             addToast(error.message, 'error');
             return null;
         }
+        
         setProfile(data as Profile);
         return data as Profile;
     };

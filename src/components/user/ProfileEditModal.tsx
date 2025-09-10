@@ -159,7 +159,7 @@ const ProfileEditModal = ({ isOpen, onClose, onSave }: ProfileEditModalProps) =>
       const success = await updateUserProfile(updates);
       if (success) {
         addToast('Perfil actualizado con éxito', 'success');
-        await onSave();
+        await onSave(success);
         onClose();
       } else {
         addToast('No se pudo actualizar el perfil.', 'error');
