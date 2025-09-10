@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/layout/Navbar';
 import PasswordStrengthMeter from '@/components/auth/PasswordStrengthMeter';
@@ -14,8 +13,9 @@ const RegisterPage = () => {
   const [username, setUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { signUpWithEmail, addToast } = useAuth();
-  const router = useRouter();
+  // --- NUEVO ESTADO ---
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const { signUpWithEmail } = useAuth();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,14 +25,32 @@ const RegisterPage = () => {
     const success = await signUpWithEmail(username, email, password);
 
     if (success) {
-      addToast('¡Registro exitoso! Revisa tu correo para confirmar tu cuenta.', 'success');
-      router.push('/'); // Redirige al inicio
+      // --- CAMBIO DE LÓGICA ---
+      // En lugar de redirigir, mostramos un mensaje de éxito.
+      setIsSubmitted(true);
     } else {
-      // Supabase suele devolver errores descriptivos, pero usamos uno genérico por ahora
       setError('No se pudo crear la cuenta. El email o usuario puede que ya exista.');
     }
     setIsLoading(false);
   };
+  
+  // --- NUEVO COMPONENTE DE VISTA DE ÉXITO ---
+  if (isSubmitted) {
+    return (
+        <>
+            <Navbar />
+            <div className="min-h-screen flex items-center justify-center bg-[#1a1a24] p-4">
+                <div className="w-full max-w-md bg-[#201f31] p-8 rounded-lg shadow-lg text-center">
+                    <h2 className="text-3xl font-bold text-white mb-4">¡Revisa tu correo!</h2>
+                    <p className="text-gray-400">
+                        Hemos enviado un enlace de confirmación a <strong className="text-white">{email}</strong>.
+                        Por favor, haz clic en el enlace para activar tu cuenta e iniciar sesión.
+                    </p>
+                </div>
+            </div>
+        </>
+    );
+  }
 
   return (
     <>
@@ -47,40 +65,18 @@ const RegisterPage = () => {
           <form onSubmit={handleRegister} className="space-y-6">
             <div>
               <label className="text-sm font-medium text-gray-300">Nombre de Usuario</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full mt-2 bg-gray-700/50 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#ffbade]"
-                required
-              />
+              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full mt-2 bg-gray-700/50 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#ffbade]" required />
             </div>
             <div>
               <label className="text-sm font-medium text-gray-300">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full mt-2 bg-gray-700/50 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#ffbade]"
-                required
-              />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-2 bg-gray-700/50 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#ffbade]" required />
             </div>
             <div>
               <label className="text-sm font-medium text-gray-300">Contraseña</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full mt-2 bg-gray-700/50 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#ffbade]"
-                required
-              />
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mt-2 bg-gray-700/50 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#ffbade]" required />
               <PasswordStrengthMeter password={password} />
             </div>
-            <button 
-              type="submit" 
-              disabled={isLoading}
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-            >
+            <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors">
               {isLoading ? 'Creando cuenta...' : 'Registrarse'}
             </button>
           </form>

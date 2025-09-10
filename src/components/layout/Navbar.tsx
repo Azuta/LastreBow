@@ -1,8 +1,9 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import UserMenu from './UserMenu';
-import NotificationsPanel from './NotificationsPanel'; // <-- NUEVO
+import NotificationsPanel from './NotificationsPanel';
 import { useAuth } from '@/context/AuthContext';
 
 const BellIcon = ({ hasUnread }: { hasUnread: boolean }) => (
@@ -14,27 +15,35 @@ const BellIcon = ({ hasUnread }: { hasUnread: boolean }) => (
 );
 
 const Navbar = () => {
-  const { isLoggedIn, login, user } = useAuth();
+  const { isLoggedIn, profile } = useAuth();
   const [isDayMode, setIsDayMode] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
-  const hasUnreadNotifications = user?.notifications.some(n => !n.read) || false;
+  // La lógica de notificaciones es un mock por ahora.
+  const hasUnreadNotifications = false; 
 
   useEffect(() => { document.body.classList.toggle('day-mode', isDayMode); }, [isDayMode]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // --- CORRECCIÓN AQUÍ ---
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) setIsUserMenuOpen(false);
-      // -----------------------
       if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) setIsNotificationsOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   const navClasses = `shadow-lg sticky top-0 z-50 ${isDayMode ? 'bg-white' : 'bg-[#201f31]'}`;
   const brandClasses = `flex-shrink-0 text-2xl font-bold ${isDayMode ? 'text-gray-900' : 'text-white'}`;
@@ -49,10 +58,18 @@ const Navbar = () => {
             <div className="hidden md:block"><div className="ml-10 flex items-baseline space-x-4"><Link href="/browse/all" className={linkClasses}>Explorar</Link><Link href="/groups" className={linkClasses}>Grupos</Link></div></div>
           </div>
           <div className="flex items-center gap-4">
-            <input type="text" placeholder="Buscar manga..." className={`rounded-full px-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ffbade] hidden sm:block ${isDayMode ? 'bg-gray-200 text-gray-900' : 'bg-gray-700 text-white'}`} />
+            <form onSubmit={handleSearchSubmit}>
+              <input 
+                type="text" 
+                placeholder="Buscar manga..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`rounded-full px-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ffbade] hidden sm:block ${isDayMode ? 'bg-gray-200 text-gray-900' : 'bg-gray-700 text-white'}`} 
+              />
+            </form>
             <label className="theme-switch"><input type="checkbox" checked={isDayMode} onChange={() => setIsDayMode(!isDayMode)} /><span className="slider"></span></label>
             
-            {isLoggedIn && user ? (
+            {isLoggedIn && profile ? (
                 <>
                     <div className="relative" ref={notificationsRef}>
                         <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className="text-gray-300 hover:text-white p-2 rounded-full hover:bg-gray-700">
@@ -61,12 +78,14 @@ const Navbar = () => {
                         {isNotificationsOpen && <NotificationsPanel />}
                     </div>
                     <div className="relative" ref={userMenuRef}>
-                      <img src={user.avatarUrl} className="w-8 h-8 rounded-full cursor-pointer" alt="User Avatar" onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} />
+                      <img src={profile.avatar_url} className="w-8 h-8 rounded-full cursor-pointer" alt="User Avatar" onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} />
                       {isUserMenuOpen && <UserMenu />}
                     </div>
                 </>
             ) : (
-                <button onClick={() => login(user!)} className="text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors">Login</button>
+                <Link href="/login" className="text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors">
+                    Login
+                </Link>
             )}
           </div>
         </div>

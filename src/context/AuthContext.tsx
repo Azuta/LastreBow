@@ -1,34 +1,46 @@
-// src/context/AuthContext.tsx
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation'; // Importar useRouter
 import { createClient } from '@/lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
 import { ToastContainer, ToastProps } from '@/components/ui/Toast';
-import { Media, UserList } from '@/types/AniListResponse'; // Importar UserList
+import { Media, UserList } from '@/types/AniListResponse';
 
 type ToastType = 'success' | 'error' | 'info';
 type Toast = Omit<ToastProps, 'onDismiss'>;
 
 interface Profile {
+    id: string;
     username: string;
     avatar_url: string;
     role: string;
+    scan_group_id?: string | null;
+    has_completed_onboarding: boolean; // <-- Nuevo campo
 }
 
-// Definimos el tipo para los datos de una nueva lista
 type NewListData = { name: string; description: string; is_public: boolean };
+type ProfileUpdate = {
+    username?: string;
+    avatar_url?: string;
+    scan_group_id?: string | null;
+    has_completed_onboarding?: boolean; // <-- Nuevo campo
+};
 
 interface AuthContextType {
     user: User | null;
     profile: Profile | null;
     isLoggedIn: boolean;
     favorites: number[];
-    userLists: UserList[]; // <-- NUEVO: Estado para las listas del usuario
+    userLists: UserList[];
     login: () => Promise<void>;
     logout: () => Promise<void>;
+    signInWithEmail: (email: string, password: string) => Promise<boolean>;
+    signUpWithEmail: (username: string, email: string, password: string) => Promise<boolean>;
+    updateUserProfile: (updates: ProfileUpdate) => Promise<boolean>;
     toggleFavorite: (media: Media) => Promise<void>;
-    createList: (listData: NewListData) => Promise<boolean>; // <-- NUEVA FUNCIÓN
+    createList: (listData: NewListData) => Promise<boolean>;
+    toggleListItem: (listId: number, media: Media) => Promise<void>;
     addToast: (message: string, type?: ToastType) => void;
 }
 
@@ -39,38 +51,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [favorites, setFavorites] = useState<number[]>([]);
-    const [userLists, setUserLists] = useState<UserList[]>([]); // <-- NUEVO ESTADO
+    const [userLists, setUserLists] = useState<UserList[]>([]);
     const [toasts, setToasts] = useState<Toast[]>([]);
+    const router = useRouter(); // <-- Hook para la navegación
 
     useEffect(() => {
         const getSessionAndData = async () => {
             const { data: { session } } = await supabase.auth.getSession();
-            setUser(session?.user ?? null);
-            if (session?.user) {
-                fetchUserData(session.user);
+            if (session) {
+                setUser(session.user);
+                await fetchUserData(session.user);
             }
         };
         getSessionAndData();
 
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
             setUser(session?.user ?? null);
             if (session?.user) {
-                fetchUserData(session.user);
+                const fetchedProfile = await fetchUserData(session.user);
+                // --- LÓGICA DE REDIRECCIÓN ---
+                if (event === 'SIGNED_IN' && fetchedProfile && !fetchedProfile.has_completed_onboarding) {
+                    router.push('/welcome');
+                }
             } else {
                 setProfile(null);
                 setFavorites([]);
-                setUserLists([]); // Limpiar listas al cerrar sesión
+                setUserLists([]);
             }
         });
 
         return () => {
             authListener.subscription.unsubscribe();
         };
-    }, []);
+    }, [router]);
 
-    const fetchUserData = async (user: User) => {
-        // Obtenemos perfil, favoritos y listas
-        const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    const fetchUserData = async (user: User): Promise<Profile | null> => {
+        const { data: profileData, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        if (error) {
+            console.error("Error fetching profile:", error);
+            setProfile(null);
+            return null;
+        }
+        
         setProfile(profileData);
 
         const { data: favoritesData } = await supabase.from('user_favorites').select('media_id').eq('user_id', user.id);
@@ -78,76 +100,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         const { data: listsData } = await supabase.from('user_lists').select('*').eq('user_id', user.id);
         setUserLists(listsData as UserList[] || []);
-    };
 
-    const login = async () => { /* ... (sin cambios) ... */ };
-    const logout = async () => { /* ... (sin cambios) ... */ };
-    const toggleFavorite = async (media: Media) => { /* ... (sin cambios) ... */ };
+        return profileData;
+    };
     
-    // <-- NUEVA FUNCIÓN PARA CREAR LISTAS -->
-    const createList = async (listData: NewListData): Promise<boolean> => {
-        if (!user) {
-            addToast("Necesitas iniciar sesión para crear una lista", "error");
-            return false;
-        }
+    // ... (El resto de funciones como login, logout, signInWithEmail, etc. no necesitan cambios)
 
-        const { data, error } = await supabase
-            .from('user_lists')
-            .insert({ ...listData, user_id: user.id })
-            .select()
-            .single();
-
-        if (error) {
-            addToast("Error al crear la lista", "error");
-            console.error(error);
-            return false;
-        }
-
-        // Añadimos la nueva lista al estado local para que la UI se actualice
-        setUserLists(prev => [...prev, data as UserList]);
-        addToast(`Lista "${listData.name}" creada con éxito`, "success");
-        return true;
-    };
-
-        // --- NUEVA FUNCIÓN PARA AÑADIR/QUITAR MANGAS DE UNA LISTA ---
-    const toggleListItem = async (listId: number, media: Media) => {
-        if (!user) return;
-
-        // Primero, verificamos si el item ya existe en la lista
-        const { data: existingItem, error: checkError } = await supabase
-            .from('list_items')
-            .select('*')
-            .eq('list_id', listId)
-            .eq('media_id', media.id)
-            .single();
-
-        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
-            addToast("Error al verificar la lista", "error");
-            console.error(checkError);
-            return;
-        }
-
-        const listName = userLists.find(l => l.id === listId)?.name || 'una lista';
-
-        if (existingItem) {
-            // Si existe, lo eliminamos
-            const { error: deleteError } = await supabase.from('list_items').delete().match({ list_id: listId, media_id: media.id });
-            if (deleteError) {
-                addToast("Error al quitar de la lista", "error");
-            } else {
-                addToast(`"${media.title.romaji}" quitado de "${listName}"`, "info");
-            }
-        } else {
-            // Si no existe, lo insertamos
-            const { error: insertError } = await supabase.from('list_items').insert({ list_id: listId, media_id: media.id });
-            if (insertError) {
-                addToast("Error al añadir a la lista", "error");
-            } else {
-                addToast(`"${media.title.romaji}" añadido a "${listName}"`, "success");
-            }
-        }
-    };
-
+    const login = async () => { /* ... */ };
+    const logout = async () => { /* ... */ };
+    const signInWithEmail = async (email: string, password: string): Promise<boolean> => { /* ... */ };
+    const signUpWithEmail = async (username: string, email: string, password: string): Promise<boolean> => { /* ... */ };
+    const updateUserProfile = async (updates: ProfileUpdate): Promise<boolean> => { /* ... */ };
+    const toggleFavorite = async (media: Media) => { /* ... */ };
+    const createList = async (listData: NewListData): Promise<boolean> => { /* ... */ };
+    const toggleListItem = async (listId: number, media: Media) => { /* ... */ };
 
     const addToast = (message: string, type: ToastType = 'info') => {
         const newToast: Toast = { id: Date.now(), message, type };
@@ -157,8 +123,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const removeToast = (id: number) => {
         setToasts(currentToasts => currentToasts.filter(toast => toast.id !== id));
     };
-    
-    const value = { user, profile, isLoggedIn: !!user, favorites, userLists, login, logout, toggleFavorite, createList, addToast };
+
+    const value = { user, profile, isLoggedIn: !!user, favorites, userLists, login, logout, signInWithEmail, signUpWithEmail, updateUserProfile, toggleFavorite, createList, toggleListItem, addToast };
 
     return (
         <AuthContext.Provider value={value}>

@@ -11,9 +11,9 @@ const PasswordStrengthMeter = ({ password = '' }: PasswordStrengthMeterProps) =>
     let score = 0;
     if (password.length > 8) score++;
     if (password.length > 12) score++;
-    if (/\d/.test(password)) score++; // Contiene números
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++; // Mayúsculas y minúsculas
-    if (/[^A-Za-z0-9]/.test(password)) score++; // Símbolos especiales
+    if (/\d/.test(password)) score++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
     return score;
   };
 
