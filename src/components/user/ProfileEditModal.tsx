@@ -272,14 +272,14 @@ const handleSave = async () => {
         <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
             {/* Banner y Avatar (actualizado) */}
             <div className="relative h-32 bg-gray-700 rounded-lg group">
-                {editData.bannerUrl && <Image src={editData.bannerUrl} alt="Banner Preview" layout="fill" objectFit="cover" className="rounded-lg" />}
+                {editData.bannerUrl && <Image src={editData.bannerUrl} alt="Banner Preview" fill style={{ objectFit: "cover" }} className="rounded-lg" sizes="100vw" />}
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-lg" onClick={() => bannerInputRef.current?.click()}>
                     <UploadIcon /> <span className="ml-2">Cambiar Banner</span>
                     <input type="file" ref={bannerInputRef} onChange={e => handleFileChange(e, 'banner')} className="hidden" accept="image/*" />
                 </div>
             </div>
             <div className="-mt-12 ml-6 relative w-24 h-24 rounded-full border-4 border-[#201f31] group bg-gray-800">
-                {editData.avatarUrl && <Image src={editData.avatarUrl} alt="Avatar Preview" layout="fill" objectFit="cover" className="rounded-full" />}
+                {editData.avatarUrl && <Image src={editData.avatarUrl} alt="Avatar Preview" fill style={{ objectFit: "cover" }} className="rounded-full" sizes="96px" />}
                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-full" onClick={() => avatarInputRef.current?.click()}>
                     <UploadIcon />
                     <input type="file" ref={avatarInputRef} onChange={e => handleFileChange(e, 'avatar')} className="hidden" accept="image/*" />

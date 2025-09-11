@@ -185,7 +185,7 @@ const MediaDetailPage = ({ params }: { params: { id: string } }) => {
             <Navbar />
             <main>
                 <div className="relative h-64 md:h-80 w-full">
-                    <Image src={media.bannerImage || ''} alt={`${media.title.romaji} Banner`} fill style={{ objectFit: 'cover' }} priority />
+                    <Image src={media.bannerImage || ''} alt={`${media.title.romaji} Banner`} fill style={{ objectFit: 'cover' }} priority sizes="100vw" />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a24] via-[#1a1a24]/50 to-transparent"></div>
                 </div>
                 <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 -mt-32 md:-mt-40">

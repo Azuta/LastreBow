@@ -124,7 +124,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return true;
     };
 
-    const signUpWithEmail = async (username: string, email: string, password: string): Promise<boolean> => {
+const signUpWithEmail = async (username: string, email: string, password: string): Promise<boolean> => {
+    // BUG FIX: Añadimos un bloque try/catch para una captura de errores más robusta
+    try {
         const { data, error } = await supabase.auth.signUp({
             email, password,
             options: {
@@ -132,9 +134,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 emailRedirectTo: `${window.location.origin}/auth/callback`,
             },
         });
-        if (error) { addToast(error.message, 'error'); return false; }
+        
+        if (error) { 
+            throw new Error(error.message); 
+        }
+
+        if (data.user?.identities?.length === 0) {
+            throw new Error('El correo electrónico ya existe. Por favor, inicia sesión o usa otro correo.');
+        }
+
+        addToast('Confirma tu correo para continuar', 'info');
         return true;
-    };
+
+    } catch (error) {
+        let errorMessage = 'No se pudo crear la cuenta. Inténtalo de nuevo más tarde.';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+        addToast(errorMessage, 'error'); 
+        console.error("Error en signUpWithEmail:", error);
+        return false;
+    }
+};
+
 
     const updateUserProfile = async (updates: ProfileUpdate): Promise<Profile | null> => {
         if (!user) return null;

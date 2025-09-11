@@ -140,6 +140,7 @@ const AddMangaToListModal = ({ isOpen, onClose, listId, onMangaAdded, currentLis
                                                     alt={media.title?.romaji ?? media.title?.english ?? 'Sin título'} 
                                                     fill 
                                                     className="rounded"
+                                                    sizes="48px"
                                                 />
                                             </div>
                                             <span className="text-white font-semibold flex-grow">{media.title?.romaji ?? media.title?.english ?? 'Sin título'}</span>

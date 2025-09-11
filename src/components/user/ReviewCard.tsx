@@ -76,7 +76,7 @@ const ReviewCard = ({ review }: { review: ReviewWithMedia }) => {
                 <div className="flex-shrink-0">
                     <Link href={`/media/${review.media.id}`}>
                         <div className="relative w-24 h-36 rounded-md overflow-hidden mx-auto">
-                            <Image src={review.media.coverImage?.large || ''} alt={review.media.title.romaji} layout="fill" objectFit="cover" />
+                            <Image src={review.media.coverImage?.large || ''} alt={review.media.title.romaji} fill objectFit="cover" sizes="96px" />
                         </div>
                     </Link>
                 </div>

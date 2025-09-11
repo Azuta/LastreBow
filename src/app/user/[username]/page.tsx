@@ -157,7 +157,7 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
             <main>
                 <div className="relative h-48 md:h-64 w-full">
                     {userData.banner_url ? (
-                        <Image src={userData.banner_url} alt="User Banner" fill style={{ objectFit: 'cover' }} priority />
+                        <Image src={userData.banner_url} alt="User Banner" fill style={{ objectFit: 'cover' }} priority sizes="100vw" />
                     ) : (
                         <div className="w-full h-full bg-gray-800"></div>
                     )}
@@ -167,7 +167,7 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
                 <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-20 relative">
                         <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-[#1a1a24] shadow-lg flex-shrink-0">
-                            <Image src={userData.avatar_url} alt={userData.username} layout="fill" objectFit="cover" className="rounded-full" />
+                            <Image src={userData.avatar_url} alt={userData.username} fill style={{ objectFit: 'cover' }} className="rounded-full" sizes="(max-width: 640px) 128px, 160px" priority />
                         </div>
 
                         <div className="ml-0 sm:ml-6 mt-4 sm:mb-4 text-center sm:text-left flex-grow">

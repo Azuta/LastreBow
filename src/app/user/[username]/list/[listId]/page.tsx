@@ -1,4 +1,3 @@
-// src/app/user/[username]/list/[listId]/page.tsx
 "use client";
 
 import { useState, useEffect, use, useMemo, useRef, useCallback } from 'react';
@@ -28,7 +27,7 @@ const PlusIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="non
 const SaveIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
 const UnsavedIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
 const EditIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
-const GridIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 3H4C3.44772 3 3 3.44772 3 4V10C3 10.5523 3.44772 11 4 11H10C10.5523 11 11 10.5523 11 10V4C11 3.44772 10.5523 3 10 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 3H14C13.4477 3 13 3.44772 13 4V10C13 10.5523 13.4477 11 14 11H20C20.5523 11 21 10.5523 21 10V4C21 3.44772 20.5523 3 20 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 13H4C3.44772 13 3 13.4477 3 14V20C3 20.5523 3.44772 21 4 21H10C10.5523 21 11 20.5523 11 20V14C11 13.4477 10.5523 13 10 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 13H14C13.4477 13 13 13.4477 13 14V20C13 20.5523 13.4477 21 14 21H20C20.5523 21 21 20.5523 21 20V14C21 13.4477 20.5523 13 20 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const GridIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 3H4C3.44772 3 3 3.44772 3 4V10C3 10.5523 3.44772 11 4 11H10C10.5523 11 11 10.5523 11 10V4C11 3.44772 10.5523 3 10 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 3H14C13.4477 3 13 3.44772 13 4V10C13 10.5523 13.4477 11 14 11H20C20.5523 11 21 10.5523 21 10V4C21 3.44772 20.5523 3 20 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 13H4C3.44772 13 3 13.4477 3 14V20C3 20.5523 3.44772 21 4 21H10C10.5523 21 11 20.5523 11 20V14C11 13.4477 10.5523 13 10 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 13H14C13.4477 13 13 13.4477 13 14V20C13 20.5523 13.4477 21 14 21H20C20.5523 21 21 20.5523 21 20V14C21 13.4477 20.5523 13 20 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 const ListIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 6H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 12H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 6H3.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 12H3.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 18H3.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 const ReloadIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6"></path><path d="M2.5 22v-6h6"></path><path d="M2.5 16a9 9 0 0 1 15.6-7.8L21.5 8"></path><path d="M21.5 8a9 9 0 0 1-15.6 7.8L2.5 16"></path></svg>;
 
@@ -93,22 +92,17 @@ const ListDetailPage = ({ params }: { params: { username: string, listId: string
         setRemovedMangaIds([]);
         setIsEditing(false);
         
-        // Cargar las opciones de vista guardadas
-        const { data: listSettings } = await supabase
-            .from('user_lists')
-            .select('view_mode, pagination_style')
-            .eq('id', listId)
-            .single();
-
-        if (listSettings) {
-            const newViewMode = listSettings.view_mode as 'grid' | 'list';
-            const newPaginationStyle = listSettings.pagination_style as 'pagination' | 'infinite';
-            setViewMode(newViewMode);
-            setPaginationStyle(newPaginationStyle);
-        } else {
-            setViewMode('grid');
-            setPaginationStyle('pagination');
-        }
+        const newViewMode = (data.view_mode as string).replace(/'/g, "") as 'grid' | 'list';
+        const newPaginationStyle = (data.pagination_style as string).replace(/'/g, "") as 'pagination' | 'infinite';
+        
+        setViewMode(newViewMode);
+        setPaginationStyle(newPaginationStyle);
+        
+        setOriginalViewSettings({
+          viewMode: newViewMode,
+          paginationStyle: newPaginationStyle,
+          currentPage: 1
+        });
         
         setCurrentPage(1);
     };
@@ -313,7 +307,7 @@ const ListDetailPage = ({ params }: { params: { username: string, listId: string
                                 Paginación
                             </button>
                             <button 
-                                onClick={() => { setPaginationStyle('infinite'); setCurrentPage(1); setHasUnsavedChanges(true); }}
+                                onClick={() => { setPaginationStyle('infinite'); setHasUnsavedChanges(true); }}
                                 className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${paginationStyle === 'infinite' ? 'bg-[#ffbade] text-black' : 'text-gray-300 hover:bg-gray-600/80'}`}
                             >
                                 Scroll Infinito

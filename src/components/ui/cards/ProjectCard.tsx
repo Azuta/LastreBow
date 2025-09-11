@@ -16,7 +16,7 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
             <div className="bg-[#2a2d42] rounded-lg p-3 group transition-all hover:scale-105 hover:bg-[#3a3d58]">
                 <div className="flex items-center gap-4">
                     <div className="relative w-16 h-24 rounded-md overflow-hidden flex-shrink-0">
-                        <Image src={project.coverImage.large} alt={project.title.romaji} fill style={{ objectFit: 'cover' }} />
+                        <Image src={project.coverImage.large} alt={project.title.romaji} fill style={{ objectFit: 'cover' }} sizes="64px" />
                     </div>
                     <div className="flex-grow">
                         <h4 className="font-bold text-white group-hover:text-[#ffbade] transition-colors">{project.title.romaji}</h4>

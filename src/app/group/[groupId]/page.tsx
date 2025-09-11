@@ -144,13 +144,13 @@ const isMember = profile?.scan_group_id === groupId;
       <Navbar />
       <main>
         <div className="relative h-48 md:h-64 w-full">
-          <Image src={groupData.bannerUrl} alt={`${groupData.name} Banner`} fill style={{ objectFit: "cover" }} />
+          <Image src={groupData.bannerUrl} alt={`${groupData.name} Banner`} fill style={{ objectFit: "cover" }} sizes="100vw" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a24] to-transparent"></div>
         </div>
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-20">
             <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-md overflow-hidden border-4 border-[#1a1a24] shadow-lg flex-shrink-0">
-              <Image src={groupData.logoUrl} alt={groupData.name} fill style={{ objectFit: "cover" }}/>
+              <Image src={groupData.logoUrl} alt={groupData.name} fill style={{ objectFit: "cover" }} sizes="160px" />
             </div>
             <div className="ml-0 sm:ml-6 mt-4 sm:mb-4 text-center sm:text-left">
               <h1 className="text-3xl md:text-4xl font-bold text-white">{groupData.name}</h1>
