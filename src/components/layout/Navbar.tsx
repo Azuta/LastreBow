@@ -7,6 +7,7 @@ import UserMenu from './UserMenu';
 import NotificationsPanel from './NotificationsPanel';
 import { useAuth } from '@/context/AuthContext';
 
+// Icono para la campana de notificaciones
 const BellIcon = ({ hasUnread }: { hasUnread: boolean }) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>

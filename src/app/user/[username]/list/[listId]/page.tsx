@@ -1,3 +1,4 @@
+// src/app/user/[username]/list/[listId]/page.tsx
 "use client";
 
 import { useState, useEffect, use, useMemo, useRef, useCallback } from 'react';

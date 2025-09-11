@@ -70,8 +70,8 @@ const uploadFile = async (file: File, filePath: string) => {
     throw new Error('No se ha proporcionado un archivo para subir.');
   }
 
-  const R2_BUCKET_NAME = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_NAME;
-  const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL;
+  const R2_BUCKET_NAME = process.env.R2_PROFILES_BUCKET_NAME;
+  const R2_PUBLIC_URL = process.env.R2_PROFILES_PUBLIC_URL;
 
   if (!R2_BUCKET_NAME || !R2_PUBLIC_URL) {
     throw new Error('Variables de entorno de R2 no configuradas.');
@@ -93,7 +93,7 @@ const uploadFile = async (file: File, filePath: string) => {
 };
 
 const deleteFile = async (filePath: string) => {
-  const R2_BUCKET_NAME = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_NAME;
+  const R2_BUCKET_NAME = process.env.R2_PROFILES_BUCKET_NAME;
   
   if (!R2_BUCKET_NAME) {
     console.error('Variable de entorno de R2 BUCKET NAME no configurada.');

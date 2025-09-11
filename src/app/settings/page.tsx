@@ -3,7 +3,7 @@
 
 import Navbar from '@/components/layout/Navbar';
 import { useUserPreferences } from '@/context/UserPreferencesContext';
-import { useAuth } from '@/context/AuthContext'; // Para los toasts
+import { useAuth } from '@/context/AuthContext';
 
 // --- Iconos para el botón de guardar ---
 const SaveIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
@@ -64,7 +64,6 @@ const SettingsPage = () => {
             <main className="max-w-screen-lg mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-4xl font-bold text-white">Configuración</h1>
-                    {/* --- Botón de Guardar/Descartar --- */}
                     {isDirty && (
                         <div className="flex gap-4">
                             <button 
@@ -86,7 +85,6 @@ const SettingsPage = () => {
                 </div>
 
                 <div className="space-y-10">
-                    {/* Sección de Experiencia de Navegación */}
                     <section>
                         <h2 className="text-2xl font-semibold text-white border-b border-gray-700 pb-2 mb-6">Experiencia de Navegación</h2>
                         <div className="space-y-4">
@@ -95,19 +93,18 @@ const SettingsPage = () => {
                                 description="Elige cómo se muestran las listas de mangas al explorar."
                                 value={preferences.viewMode}
                                 options={['grid', 'list']}
-                                onChange={() => setPreference('viewMode', preferences.viewMode === 'grid' ? 'list' : 'grid')}
+                                onChange={(value) => setPreference('viewMode', value)}
                             />
                             <SettingsOption
                                 label="Estilo de Paginación"
                                 description="Selecciona entre páginas numeradas o scroll infinito."
                                 value={preferences.paginationStyle}
                                 options={['pagination', 'infinite']}
-                                onChange={() => setPreference('paginationStyle', preferences.paginationStyle === 'pagination' ? 'infinite' : 'pagination')}
+                                onChange={(value) => setPreference('paginationStyle', value)}
                             />
                         </div>
                     </section>
                     
-                    {/* Sección de Contenido y Seguridad */}
                     <section>
                          <h2 className="text-2xl font-semibold text-white border-b border-gray-700 pb-2 mb-6">Contenido y Seguridad</h2>
                          <div className="space-y-4">
@@ -132,7 +129,6 @@ const SettingsPage = () => {
                         </div>
                     </section>
 
-                     {/* --- Nueva Sección de Privacidad y Notificaciones --- */}
                     <section>
                         <h2 className="text-2xl font-semibold text-white border-b border-gray-700 pb-2 mb-6">Privacidad y Notificaciones</h2>
                         <div className="space-y-4">

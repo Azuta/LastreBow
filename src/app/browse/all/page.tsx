@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { notFound } from 'next/navigation'; // <--- Importamos notFound
+import { notFound } from 'next/navigation';
 import { fetchAllMedia } from "@/services/fetchAniList"; 
 import { Media } from "@/types/AniListResponse";
 import Navbar from "@/components/layout/Navbar";
@@ -55,14 +55,18 @@ const MOCK_USERS: { [key: string]: { followedIds: number[] } } = {
 };
 
 const BrowseAllPage = () => {
-  const { viewMode, toggleViewMode, paginationStyle } = useUserPreferences();
+  // Obtiene las preferencias del usuario del contexto, pero no el setter
+  const { preferences } = useUserPreferences();
+  const paginationStyle = preferences.paginationStyle;
+  
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // --- Simulación de sesión de usuario ---
   const [user, setUser] = useState({ loggedIn: true, username: "Dymedis" });
   
+  const [showOnlyFollowed, setShowOnlyFollowed] = useState(false);
+
   const [allMedia, setAllMedia] = useState<Media[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -75,24 +79,33 @@ const BrowseAllPage = () => {
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOptionsKey>('POPULARITY_DESC');
   const [searchTerm, setSearchTerm] = useState("");
-  const [showOnlyFollowed, setShowOnlyFollowed] = useState(false);
+  
+  // Estado local para la vista, inicializado con la preferencia del usuario
+  const [localViewMode, setLocalViewMode] = useState(preferences.viewMode);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = viewMode === 'grid' ? 14 : 7;
+  const ITEMS_PER_PAGE = localViewMode === 'grid' ? 14 : 7;
   
-  // Lógica para manejar la carga inicial y el parámetro 'followedBy'
+  // Sincronizar el estado local si la preferencia cambia desde otro lado (ej. /settings)
+  useEffect(() => {
+    setLocalViewMode(preferences.viewMode);
+  }, [preferences.viewMode]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedGenres, selectedFormats, selectedStatus, searchTerm, sortBy, localViewMode, paginationStyle, showOnlyFollowed]);
+
   useEffect(() => {
     const followedByUser = searchParams.get('followedBy');
     if (followedByUser) {
       if (!MOCK_USERS[followedByUser]) {
-        // Si el usuario en la URL no existe, lanzamos un error que mostrará la página error.tsx
         return notFound();
       }
-      // Si el usuario es válido, activamos el modo "ver seguidos"
       setIsViewingSharedList(followedByUser);
       setShowOnlyFollowed(true);
     } else {
-      // Si no hay 'followedBy', cargamos los filtros normales de la URL
+      setIsViewingSharedList(null);
+      setShowOnlyFollowed(false);
       setSelectedGenres(searchParams.get('genres')?.split(',').filter(Boolean) || []);
       setSelectedFormats(searchParams.get('formats')?.split(',').filter(Boolean) || []);
       setSelectedStatus(searchParams.get('status')?.split(',').filter(Boolean) || []);
@@ -107,10 +120,8 @@ const BrowseAllPage = () => {
       setIsLoading(false);
     };
     loadMedia();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, [searchParams]);
 
-  // Sincroniza el estado de los filtros con la URL para compartir
   useEffect(() => {
     const params = new URLSearchParams();
     const setParam = (key: string, value: string[]) => { if (value.length > 0) params.set(key, value.join(',')) };
@@ -124,12 +135,10 @@ const BrowseAllPage = () => {
     const queryString = params.toString();
     const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
     
-    // Solo actualizamos la URL del navegador si no estamos viendo una lista compartida
     if (!isViewingSharedList) {
       router.replace(newUrl, { scroll: false });
     }
     
-    // La URL para compartir siempre refleja el estado actual
     let shareableUrl = window.location.origin + newUrl;
     if (showOnlyFollowed && user.loggedIn) {
         const shareParams = new URLSearchParams(queryString);
@@ -141,28 +150,24 @@ const BrowseAllPage = () => {
   }, [selectedGenres, selectedFormats, selectedStatus, searchTerm, sortBy, pathname, router, showOnlyFollowed, user, isViewingSharedList]);
 
   const sortedAndFilteredMedia = useMemo(() => {
-    // Si estamos viendo una lista compartida, usamos los IDs de ese usuario
     const followedIds = isViewingSharedList ? MOCK_USERS[isViewingSharedList]?.followedIds : MOCK_USERS[user.username]?.followedIds;
-
     const filtered = allMedia.filter(media => {
-        if (showOnlyFollowed && !followedIds?.includes(media.id)) {
-            return false;
-        }
         const searchMatch = !searchTerm || (media.title.english?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || (media.title.romaji?.toLowerCase() || '').includes(searchTerm.toLowerCase());
         const genreMatch = selectedGenres.length === 0 || selectedGenres.every(g => media.genres.includes(g));
         const formatMatch = selectedFormats.length === 0 || selectedFormats.includes(media.format);
         const statusMatch = selectedStatus.length === 0 || selectedStatus.includes(media.status);
-        return searchMatch && genreMatch && formatMatch && statusMatch;
+        const followMatch = !showOnlyFollowed || (followedIds && followedIds.includes(media.id));
+        return searchMatch && genreMatch && formatMatch && statusMatch && followMatch;
     });
     return [...filtered].sort((a, b) => {
         switch (sortBy) {
             case 'SCORE_DESC': return (b.averageScore || 0) - (a.averageScore || 0);
             case 'TITLE_ROMAJI': return a.title.romaji.localeCompare(b.title.romaji);
-            default: return b.popularity - a.popularity;
+            default: return (b.popularity || 0) - (a.popularity || 0);
         }
     });
-  }, [allMedia, searchTerm, selectedGenres, selectedFormats, selectedStatus, sortBy, showOnlyFollowed, isViewingSharedList, user.username]);
-
+  }, [allMedia, searchTerm, selectedGenres, selectedFormats, selectedStatus, sortBy, showOnlyFollowed, isViewingSharedList, user]);
+  
   const totalPages = Math.ceil(sortedAndFilteredMedia.length / ITEMS_PER_PAGE);
   const currentItems = useMemo(() => {
       if (paginationStyle === 'infinite') return sortedAndFilteredMedia.slice(0, currentPage * ITEMS_PER_PAGE);
@@ -188,7 +193,7 @@ const BrowseAllPage = () => {
   };
   
   const createHandler = <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>) => (itemToToggle: T) => {
-      if(isViewingSharedList) return; // No permitir cambiar filtros si se ve una lista compartida
+      if(isViewingSharedList) return;
       setter(prev => prev.includes(itemToToggle) ? prev.filter(i => i !== itemToToggle) : [...prev, itemToToggle]);
   };
   
@@ -236,18 +241,32 @@ const BrowseAllPage = () => {
                     </select>
                     <button onClick={() => setIsFiltersOpen(true)} disabled={!!isViewingSharedList} className="flex items-center gap-2 px-4 py-1.5 bg-gray-700/50 hover:bg-gray-600/80 text-gray-300 rounded-full text-sm font-semibold transition-colors disabled:opacity-50"><FilterIcon />Filtros</button>
                     <div className="flex items-center bg-gray-700/50 rounded-full p-1">
-                        <button onClick={toggleViewMode} className={`p-1.5 rounded-full ${viewMode === 'grid' ? 'bg-[#ffbade] text-black' : 'text-gray-300'}`}><GridIcon /></button>
-                        <button onClick={toggleViewMode} className={`p-1.5 rounded-full ${viewMode === 'list' ? 'bg-[#ffbade] text-black' : 'text-gray-300'}`}><ListIcon /></button>
+                        <button onClick={() => setLocalViewMode('grid')} className={`p-1.5 rounded-full ${localViewMode === 'grid' ? 'bg-[#ffbade] text-black' : 'text-gray-300'}`}><GridIcon /></button>
+                        <button onClick={() => setLocalViewMode('list')} className={`p-1.5 rounded-full ${localViewMode === 'list' ? 'bg-[#ffbade] text-black' : 'text-gray-300'}`}><ListIcon /></button>
+                    </div>
+                     <div className="flex items-center space-x-2 bg-gray-700/50 rounded-full p-1">
+                        <button 
+                            onClick={() => setPreference('paginationStyle', 'pagination')} 
+                            className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${paginationStyle === 'pagination' ? 'bg-[#ffbade] text-black' : 'text-gray-300 hover:bg-gray-600/80'}`}
+                        >
+                            Paginación
+                        </button>
+                        <button 
+                            onClick={() => setPreference('paginationStyle', 'infinite')}
+                            className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${paginationStyle === 'infinite' ? 'bg-[#ffbade] text-black' : 'text-gray-300 hover:bg-gray-600/80'}`}
+                        >
+                            Scroll Infinito
+                        </button>
                     </div>
                 </div>
               </div>
               
               {isLoading ? <p className="text-center text-white">Cargando mangas...</p> : (
                   <>
-                      <div className={viewMode === 'grid' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-x-4 gap-y-6" : "flex flex-col gap-4"}>
+                      <div className={localViewMode === 'grid' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-x-4 gap-y-6" : "flex flex-col gap-4"}>
                           {currentItems.map((media, index) => (
                               <div key={media.id} ref={index === currentItems.length - 1 ? lastElementRef : null}>
-                                  {viewMode === 'grid' ? <MangaCard media={media} /> : <MangaCardList media={media} />}
+                                  {localViewMode === 'grid' ? <MangaCard media={media} /> : <MangaCardList media={media} />}
                               </div>
                           ))}
                       </div>

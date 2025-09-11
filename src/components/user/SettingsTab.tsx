@@ -93,7 +93,7 @@ const SettingsTab = () => {
                         description="Selecciona entre páginas numeradas o scroll infinito."
                         value={preferences.paginationStyle}
                         options={['pagination', 'infinite']}
-                        onChange={() => setPreference('paginationStyle', preferences.paginationStyle === 'pagination' ? 'infinite' : 'pagination')}
+                        onChange={(value) => setPreference('paginationStyle', value)}
                     />
                 </div>
             </section>

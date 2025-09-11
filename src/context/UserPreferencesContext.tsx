@@ -6,7 +6,6 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 type ViewMode = 'grid' | 'list';
 type PaginationStyle = 'pagination' | 'infinite';
 
-// --- NUEVO TIPO PARA LAS PREFERENCIAS ---
 export interface UserPreferences {
   viewMode: ViewMode;
   paginationStyle: PaginationStyle;
@@ -14,59 +13,61 @@ export interface UserPreferences {
   hideExternalLinks: boolean;
   showAdultContent: boolean;
   hideAdultContentOnProfile: boolean;
-  profileIsPrivate: boolean; // <-- Nueva
-  notifyByEmail: boolean;    // <-- Nueva
+  profileIsPrivate: boolean;
+  notifyByEmail: boolean;
 }
 
 interface UserPreferencesContextType {
   preferences: UserPreferences;
   setPreference: <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => void;
-  savePreferences: () => void; // <-- Nueva función para guardar
-  isDirty: boolean; // <-- Nuevo estado para saber si hay cambios sin guardar
-  resetPreferences: () => void; // <-- Para descartar cambios
+  savePreferences: () => void;
+  isDirty: boolean;
+  resetPreferences: () => void;
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | undefined>(undefined);
 
-export const UserPreferencesProvider = ({ children }: { children: ReactNode }) => {
-  const [preferences, setPreferences] = useState<UserPreferences>({
-    viewMode: 'grid',
-    paginationStyle: 'pagination',
-    warnOnExternalLinks: true,
-    hideExternalLinks: false,
-    showAdultContent: false,
-    hideAdultContentOnProfile: false,
-    profileIsPrivate: false,
-    notifyByEmail: true,
-  });
-  
-  const [initialPreferences, setInitialPreferences] = useState<UserPreferences>(preferences);
-  const [isHydrated, setIsHydrated] = useState(false);
+// Define la configuración por defecto para usar si no hay nada en localStorage
+const DEFAULT_PREFERENCES: UserPreferences = {
+  viewMode: 'grid',
+  paginationStyle: 'pagination',
+  warnOnExternalLinks: true,
+  hideExternalLinks: false,
+  showAdultContent: false,
+  hideAdultContentOnProfile: false,
+  profileIsPrivate: false,
+  notifyByEmail: true,
+};
 
-  useEffect(() => {
+export const UserPreferencesProvider = ({ children }: { children: ReactNode }) => {
+  // Lógica para inicializar el estado
+  const [preferences, setPreferences] = useState<UserPreferences>(() => {
     try {
-      const savedPrefs = localStorage.getItem('userPreferences');
-      if (savedPrefs) {
-        const parsedPrefs = JSON.parse(savedPrefs);
-        setPreferences(currentPrefs => ({ ...currentPrefs, ...parsedPrefs }));
-        setInitialPreferences(currentPrefs => ({ ...currentPrefs, ...parsedPrefs }));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const savedPrefs = localStorage.getItem('userPreferences');
+        // Combina las preferencias guardadas con las por defecto para evitar perder configuraciones
+        return savedPrefs ? { ...DEFAULT_PREFERENCES, ...JSON.parse(savedPrefs) } : DEFAULT_PREFERENCES;
       }
     } catch (error) {
       console.error("Error al leer localStorage", error);
     }
-    setIsHydrated(true);
-  }, []);
+    return DEFAULT_PREFERENCES;
+  });
   
+  const [initialPreferences, setInitialPreferences] = useState<UserPreferences>(preferences);
+
+  // El resto de los efectos y funciones se mantienen igual
   const setPreference = <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
     setPreferences(prev => ({ ...prev, [key]: value }));
   };
   
   const savePreferences = () => {
-    if (isHydrated) {
+    try {
       localStorage.setItem('userPreferences', JSON.stringify(preferences));
-      setInitialPreferences(preferences); // Actualiza el estado inicial para que isDirty sea false
-      // Aquí también llamarías a tu API para guardar en la base de datos
+      setInitialPreferences(preferences);
       console.log('Preferencias guardadas:', preferences);
+    } catch (error) {
+      console.error("Error al guardar en localStorage", error);
     }
   };
   
