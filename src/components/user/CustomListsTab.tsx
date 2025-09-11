@@ -7,27 +7,26 @@ import MangaListCard from '@/components/ui/cards/MangaListCard';
 import ListEditModal from './ListEditModal';
 import { useAuth } from '@/context/AuthContext';
 
-interface CustomListsTabProps {
-    lists: UserList[];
-    username: string;
-}
-
-const PlusIcon = () => <svg width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-
-const CustomListsTab = ({ lists, username }: CustomListsTabProps) => {
-    // Obtenemos los datos y funciones del contexto
-    const { profile, createList } = useAuth(); 
+// Se eliminan las props y se usa el contexto
+const CustomListsTab = () => {
+    // Obtenemos los datos y funciones del contexto, incluyendo userLists
+    const { profile, createList, userLists } = useAuth(); 
     const [isModalOpen, setIsModalOpen] = useState(false);
     
+    // Obtenemos el username del perfil del contexto
+    const username = profile?.username;
     const isOwnProfile = profile?.username === username;
 
-    // Esta función ahora llamará a la lógica del AuthContext
     const handleSaveList = async (listData: { name: string; description: string; is_public: boolean }) => {
         const success = await createList(listData);
         if (success) {
-            setIsModalOpen(false); // Cierra el modal solo si la operación fue exitosa
+            setIsModalOpen(false);
         }
     };
+
+    if (!username) {
+        return <div className="text-center py-16 text-gray-400">Cargando...</div>;
+    }
 
     return (
         <>
@@ -44,13 +43,13 @@ const CustomListsTab = ({ lists, username }: CustomListsTabProps) => {
                 )}
             </div>
 
-            {lists.length === 0 ? (
+            {userLists.length === 0 ? (
                 <div className="text-center py-16 text-gray-400">
                     <p>{username} no ha creado ninguna lista pública todavía.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {lists.map(list => (
+                    {userLists.map(list => (
                         <MangaListCard key={list.id} list={list} />
                     ))}
                 </div>
@@ -66,3 +65,5 @@ const CustomListsTab = ({ lists, username }: CustomListsTabProps) => {
 };
 
 export default CustomListsTab;
+
+const PlusIcon = () => <svg width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;

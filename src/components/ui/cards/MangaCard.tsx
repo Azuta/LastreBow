@@ -14,7 +14,7 @@ interface MangaCardProps {
 
 // Iconos
 const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-yellow-400"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" /></svg>;
-const LockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
+const LockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
 const HeartIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
 const PlusIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
 
@@ -27,7 +27,10 @@ const MangaCard = ({ media, isPrivate = false, isSelectable = false }: MangaCard
     return null;
   }
   
-  const isFavorite = favorites.includes(media.id);
+  // Se obtiene la lista de IDs de favoritos para una comprobación más sencilla
+  const favoriteIds = favorites.map(fav => fav.id);
+  const isFavorite = favoriteIds.includes(media.id);
+  
   const title = (media.title?.english || media.title_english) || (media.title?.romaji || media.title_romaji);
   const score = media.averageScore ? (media.averageScore / 10).toFixed(2) : 'N/A';
   const genre = media.genres?.[0] || 'Unknown';
@@ -39,7 +42,6 @@ const MangaCard = ({ media, isPrivate = false, isSelectable = false }: MangaCard
       addToast("Necesitas iniciar sesión para añadir a favoritos", "error");
       return;
     }
-    // Llama a la función del contexto para registrar la actividad
     await toggleFavorite(media);
     if (isFavorite) {
         addToast(`${title} eliminado de tus favoritos.`, 'favorite-remove');
@@ -51,7 +53,6 @@ const MangaCard = ({ media, isPrivate = false, isSelectable = false }: MangaCard
   const handleAddToList = async (e: React.MouseEvent, listId: number) => {
     e.preventDefault();
     e.stopPropagation();
-    // Llama a la función del contexto para registrar la actividad
     await toggleListItem(listId, media);
     setIsListMenuOpen(false);
   }
@@ -125,14 +126,13 @@ const MangaCard = ({ media, isPrivate = false, isSelectable = false }: MangaCard
                   <div className="absolute left-0 top-full mt-2 w-48 bg-[#2b2d42] rounded-lg shadow-lg py-1 z-30">
                     {userLists.length > 0 ? (
                       userLists.map(list => (
-                        <a
+                        <div
                           key={list.id}
-                          href="#"
                           onClick={(e) => handleAddToList(e, list.id as unknown as number)}
-                          className="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                          className="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 cursor-pointer"
                         >
                           {list.name}
-                        </a>
+                        </div>
                       ))
                     ) : (
                       <p className="px-4 py-2 text-sm text-gray-400">No tienes listas.</p>

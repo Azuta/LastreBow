@@ -1,4 +1,4 @@
-// azuta/mangauserpage/MangaUserPage-main/src/app/user/[username]/page.tsx
+// src/app/user/[username]/page.tsx
 "use client";
 
 import { useState, useEffect, useCallback, use } from 'react';
@@ -38,6 +38,7 @@ interface UserProfile {
     profile_comments: any[];
     reviews: any[];
     activity: any[];
+    hide_adult_content_on_profile: boolean;
 }
 
 const mapToMediaProps = (manga: any): Media => ({
@@ -72,8 +73,7 @@ const mapToMediaProps = (manga: any): Media => ({
 
 const UserProfilePage = ({ params }: { params: { username: string } }) => {
     const { username: initialUsername } = use(params);
-    // --- LÍNEA CORREGIDA: Traemos 'favorites' del contexto ---
-    const { profile: loggedInUserProfile, addToast, favorites } = useAuth();
+    const { profile: loggedInUserProfile, addToast, favorites, userLists } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [userData, setUserData] = useState<UserProfile | null>(null);
@@ -117,10 +117,7 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
         fetchUserData();
     }, [fetchUserData]);
 
-    // --- NUEVO HOOK para re-sincronizar la página ---
     useEffect(() => {
-      // Este efecto se dispara cada vez que la lista de favoritos en el AuthContext cambia.
-      // Si el perfil que estamos viendo es el nuestro, forzamos una nueva carga de datos.
       if (isOwnProfile) {
         fetchUserData();
       }
@@ -196,8 +193,8 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
                     <div className="mt-8">
                         <div className="flex border-b border-gray-700 mb-6 overflow-x-auto">
                            <button onClick={() => setActiveTab('overview')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'overview' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Resumen</button>
-                           <button onClick={() => setActiveTab('favorites')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'favorites' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Favoritos ({userData.favorites.length})</button>
-                           <button onClick={() => setActiveTab('lists')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'lists' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Listas ({userData.lists.length})</button>
+                           <button onClick={() => setActiveTab('favorites')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'favorites' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Favoritos ({favorites.length})</button>
+                           <button onClick={() => setActiveTab('lists')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'lists' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Listas ({userLists.length})</button>
                            <button onClick={() => setActiveTab('reviews')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'reviews' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Reseñas ({userData.reviews.length})</button>
                            <button onClick={() => setActiveTab('history')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === 'history' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>
                                 <HistoryIcon /> Historial ({userData.activity.length})
@@ -213,13 +210,13 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
                                     username={userData.username}
                                     recentFavorites={userData.favorites.slice(0, 7)}
                                     initialComments={userData.profile_comments}
-                                    totalFavorites={userData.favorites.length}
-                                    totalLists={userData.lists.length}
+                                    totalFavorites={favorites.length}
+                                    totalLists={userLists.length}
                                     totalReviews={userData.reviews.length}
                                 />
                             )}
                             {activeTab === 'favorites' && (<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-x-4 gap-y-6 py-8">{userData.favorites.map(manga => <MangaCard key={manga.id} media={manga} />)}</div>)}
-                            {activeTab === 'lists' && <CustomListsTab lists={userData.lists} username={userData.username} />}
+                            {activeTab === 'lists' && <CustomListsTab />}
                             {activeTab === 'reviews' && (
                                 <ReviewsTab
                                     reviews={userData.reviews}

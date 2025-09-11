@@ -105,8 +105,6 @@ const deleteFile = async (filePath: string) => {
     Key: filePath,
   });
 
-  console.log(command);
-
   try {
     await R2.send(command);
     console.log(`Archivo eliminado con éxito: ${filePath}`);
