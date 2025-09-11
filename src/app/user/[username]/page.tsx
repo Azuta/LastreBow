@@ -16,6 +16,7 @@ import { useAuth } from '@/context/AuthContext';
 import ProfileEditModal from '@/components/user/ProfileEditModal';
 import { fetchFavoritesByUserId } from '@/services/fetchAniList';
 import HistoryTab from '@/components/user/HistoryTab';
+import MarketplaceTab from '@/components/user/MarketplaceTab';
 
 const supabase = createClient();
 
@@ -200,7 +201,7 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
                                 <HistoryIcon /> Historial ({userData.activity.length})
                            </button>
                            {isOwnProfile && (
-                                <button onClick={() => setActiveTab('settings')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'settings' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Configuración</button>
+                                <button onClick={() => setActiveTab('marketplace')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'marketplace' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Marketplace</button>
                            )}
                         </div>
                         <div>
@@ -233,6 +234,7 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
                                 />
                             )}
                             {activeTab === 'settings' && isOwnProfile && <SettingsTab />}
+                            {activeTab === 'marketplace' && isOwnProfile && <MarketplaceTab />}
                         </div>
                     </div>
                 </div>

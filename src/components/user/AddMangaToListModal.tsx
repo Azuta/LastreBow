@@ -61,6 +61,11 @@ const AddMangaToListModal = ({ isOpen, onClose, listId, onMangaAdded, currentLis
     }, [searchTerm, allMedia]);
 
     const handleToggleSelect = (mangaId: number) => {
+        // Prevén la deselección de mangas que ya están en la lista original
+        if (currentListMediaIds.includes(mangaId)) {
+            return;
+        }
+
         setSelectedMangaIds(prev =>
             prev.includes(mangaId) ? prev.filter(id => id !== mangaId) : [...prev, mangaId]
         );
@@ -174,7 +179,7 @@ const AddMangaToListModal = ({ isOpen, onClose, listId, onMangaAdded, currentLis
                     <h4 className="text-sm font-semibold text-white">Manga(s) seleccionados ({selectedMangaIds.length})</h4>
                     <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
                         {selectedMangaIds.map(id => {
-                            const manga = searchResults.find(m => m.id === id) || availableFavorites.find(m => m.id === id);
+                            const manga = searchResults.find(m => m.id === id) || allMedia.find(m => m.id === id);
                             return manga ? (
                                 <div key={manga.id} className={`relative group inline-block text-black text-xs font-semibold px-2 py-1 rounded-full transition-colors ${currentListMediaIds.includes(id) ? 'bg-gray-400' : 'bg-[#ffbade]'}`}>
                                     <span className={currentListMediaIds.includes(id) ? 'text-gray-700' : ''}>

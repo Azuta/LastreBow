@@ -170,3 +170,13 @@ export interface UserList {
     };
     collaborators?: CommentUser[];
 }
+
+// --- Nuevo tipo para los plugins del Marketplace ---
+export interface Plugin {
+    id: string;
+    type: 'user' | 'reader' | 'scan';
+    name: string;
+    description: string;
+    isInstalled: boolean;
+    icon: string;
+}

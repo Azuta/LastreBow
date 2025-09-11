@@ -1,3 +1,4 @@
+// src/components/layout/Navbar.tsx
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -55,7 +56,13 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <Link href="/" className={brandClasses}>Manga<span className="text-[#ffbade]">List</span></Link>
-            <div className="hidden md:block"><div className="ml-10 flex items-baseline space-x-4"><Link href="/browse/all" className={linkClasses}>Explorar</Link><Link href="/groups" className={linkClasses}>Grupos</Link></div></div>
+            <div className="hidden md:block">
+              <div className="ml-10 flex items-baseline space-x-4">
+                <Link href="/browse/all" className={linkClasses}>Explorar</Link>
+                <Link href="/groups" className={linkClasses}>Grupos</Link>
+                <Link href="/marketplace" className={linkClasses}>Marketplace</Link>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <form onSubmit={handleSearchSubmit}>

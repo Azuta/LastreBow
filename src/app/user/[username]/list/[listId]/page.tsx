@@ -13,6 +13,7 @@ import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { SortableMangaCard } from '@/components/user/SortableMangaCard';
 import { useAuth } from '@/context/AuthContext';
+import DiscardChangesModal from '@/components/user/DiscardChangesModal'; // Importamos el nuevo modal
 
 // Definimos un tipo para la lista con sus items
 interface ListWithItems extends UserList {
@@ -23,7 +24,7 @@ interface ListWithItems extends UserList {
 const PlusIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
 const SaveIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
 const UnsavedIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
-
+const EditIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
 
 const ListDetailPage = ({ params }: { params: { username: string, listId: string } }) => {
     const { listId: listIdWithSlug, username } = use(params);
@@ -35,9 +36,12 @@ const ListDetailPage = ({ params }: { params: { username: string, listId: string
     const [sortedMediaItems, setSortedMediaItems] = useState<Media[]>([]);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [removedMangaIds, setRemovedMangaIds] = useState<number[]>([]);
+    const [isEditing, setIsEditing] = useState(false);
+    const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false);
 
     const supabase = createClient();
-    const { addToast, removeMangaFromList } = useAuth();
+    const { addToast } = useAuth();
 
 
     const fetchListData = async () => {
@@ -68,6 +72,10 @@ const ListDetailPage = ({ params }: { params: { username: string, listId: string
         setListData(data as ListWithItems);
         setSortedMediaItems(mediaItems);
         setIsLoading(false);
+        // Reseteamos los estados al cargar la lista
+        setHasUnsavedChanges(false);
+        setRemovedMangaIds([]);
+        setIsEditing(false);
     };
 
     useEffect(() => {
@@ -87,28 +95,59 @@ const ListDetailPage = ({ params }: { params: { username: string, listId: string
     
     const handleSaveOrder = async () => {
         setIsSaving(true);
-        const updates = sortedMediaItems.map((media, index) => ({
+
+        const upsertData = sortedMediaItems.map((media, index) => ({
             list_id: listId,
             media_id: media.id,
             order: index + 1,
         }));
-        const { error } = await supabase.from('list_items').upsert(updates, { onConflict: 'list_id, media_id' });
-        if (error) {
-            console.error("Error al guardar el nuevo orden:", error);
-            addToast("Hubo un error al guardar el orden.", 'error');
-        } else {
+        
+        const removeData = removedMangaIds.map(mediaId => ({
+            list_id: listId,
+            media_id: mediaId,
+        }));
+
+        try {
+            if (upsertData.length > 0) {
+                const { error: upsertError } = await supabase.from('list_items').upsert(upsertData, { onConflict: 'list_id, media_id' });
+                if (upsertError) throw upsertError;
+            }
+
+            if (removeData.length > 0) {
+                const { error: removeError } = await supabase.from('list_items').delete().in('media_id', removedMangaIds).eq('list_id', listId);
+                if (removeError) throw removeError;
+            }
+
             setHasUnsavedChanges(false);
-            addToast("Orden guardado con éxito.", 'success');
+            setRemovedMangaIds([]);
+            addToast("Lista actualizada con éxito.", 'success');
+            fetchListData();
+        } catch (error) {
+            console.error("Error al guardar los cambios:", error);
+            addToast("Hubo un error al guardar los cambios.", 'error');
+        } finally {
+            setIsSaving(false);
         }
-        setIsSaving(false);
     };
 
-    const handleRemoveManga = async (mediaId: number) => {
-        // Lógica para actualizar el estado antes de la llamada a la API para una respuesta instantánea
+    const handleRemoveManga = (mediaId: number) => {
         setSortedMediaItems(prevItems => prevItems.filter(item => item.id !== mediaId));
+        setRemovedMangaIds(prevIds => [...prevIds, mediaId]);
+        setHasUnsavedChanges(true);
+    };
+    
+    // Función que se llama cuando se confirma el descarte de cambios
+    const handleConfirmDiscard = () => {
+        setIsDiscardModalOpen(false);
+        fetchListData(); // Volvemos a cargar la lista para descartar los cambios locales
+    };
 
-        // Llamar a la función del contexto para manejar la eliminación en la base de datos
-        await removeMangaFromList(listId, mediaId);
+    const handleToggleEditMode = () => {
+        if (isEditing && hasUnsavedChanges) {
+            setIsDiscardModalOpen(true); // Abre el modal en lugar de la alerta
+        } else {
+            setIsEditing(!isEditing);
+        }
     };
 
     useEffect(() => {
@@ -158,19 +197,31 @@ const ListDetailPage = ({ params }: { params: { username: string, listId: string
                         <p className="text-gray-400 mt-2">{listData.description}</p>
                     </div>
                     <div className="flex gap-4 items-center">
-                        {hasUnsavedChanges && (
+                        {isEditing && hasUnsavedChanges && (
                             <div className="flex items-center gap-2 text-sm text-yellow-400 font-semibold transition-opacity duration-300">
                                 <UnsavedIcon /> 
                                 <span className="hidden sm:inline">Cambios sin guardar</span>
                             </div>
                         )}
                         <button
-                            onClick={handleSaveOrder}
-                            disabled={!hasUnsavedChanges || isSaving}
-                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={handleToggleEditMode}
+                            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                                isEditing
+                                    ? 'bg-red-600 text-white hover:bg-red-700'
+                                    : 'bg-gray-700/50 text-white hover:bg-gray-600/80'
+                            }`}
                         >
-                            <SaveIcon /> {isSaving ? 'Guardando...' : 'Guardar orden'}
+                            <EditIcon /> {isEditing ? 'Salir de Edición' : 'Editar'}
                         </button>
+                        {isEditing && (
+                            <button
+                                onClick={handleSaveOrder}
+                                disabled={!hasUnsavedChanges || isSaving}
+                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <SaveIcon /> {isSaving ? 'Guardando...' : 'Guardar cambios'}
+                            </button>
+                        )}
                         <button
                             onClick={() => setIsAddMangaModalOpen(true)}
                             className="flex items-center gap-2 px-4 py-2 bg-gray-700/50 text-white rounded-lg text-sm font-semibold hover:bg-gray-600/80 transition-colors"
@@ -188,7 +239,12 @@ const ListDetailPage = ({ params }: { params: { username: string, listId: string
                         <SortableContext items={mediaItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-x-4 gap-y-6">
                                 {mediaItems.map(manga => (
-                                    <SortableMangaCard key={manga.id} media={manga} onRemove={handleRemoveManga} />
+                                    <SortableMangaCard
+                                        key={manga.id}
+                                        media={manga}
+                                        onRemove={handleRemoveManga}
+                                        isEditing={isEditing}
+                                    />
                                 ))}
                             </div>
                         </SortableContext>
@@ -207,6 +263,12 @@ const ListDetailPage = ({ params }: { params: { username: string, listId: string
                 listId={listId}
                 onMangaAdded={fetchListData}
                 currentListMediaIds={currentListMediaIds}
+            />
+
+            <DiscardChangesModal
+                isOpen={isDiscardModalOpen}
+                onConfirm={handleConfirmDiscard}
+                onCancel={() => setIsDiscardModalOpen(false)}
             />
         </>
     );

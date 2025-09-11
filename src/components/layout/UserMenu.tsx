@@ -29,10 +29,11 @@ const UserMenu = () => {
       <Link href={`/user/${profile.username}?tab=community`} className="flex items-center gap-2 px-2 py-2 text-gray-300 hover:bg-gray-700 rounded text-txnav">
         <span>👥</span> Mis Grupos
       </Link>
-      
       <hr className="border-gray-600 my-2" />
-
-      {/* --- LÍNEA MODIFICADA --- */}
+      <Link href="/marketplace" className="flex items-center gap-2 px-2 py-2 text-gray-300 hover:bg-gray-700 rounded text-txnav">
+        <span>🛒</span> Marketplace
+      </Link>
+      <hr className="border-gray-600 my-2" />
       <Link href={`/user/${profile.username}?tab=settings`} className="flex items-center gap-2 px-2 py-2 text-gray-300 hover:bg-gray-700 rounded text-txnav">
           <span>⚙️</span> Configuración
       </Link>
