@@ -14,18 +14,22 @@ const StarIcon = () => (
 );
 
 const MangaCardList = ({ media }: MangaCardListProps) => {
-  const title = media.title.english || media.title.romaji;
+  // Manejo de la estructura de datos para evitar el TypeError
+  const title = (media.title?.english || media.title?.romaji) || (media.title_english || media.title_romaji);
   const score = media.averageScore ? (media.averageScore / 10).toFixed(2) : 'N/A';
   
   // Limita la descripción a un número de caracteres
-  const shortDescription = media.description.replace(/<br>/g, ' ').substring(0, 150) + '...';
+  const shortDescription = media.description?.replace(/<br>/g, ' ').substring(0, 150) + '...';
+
+  // Usar la imagen correcta dependiendo de la estructura de datos
+  const coverImage = media.coverImage?.large || media.cover_image_large;
 
   return (
     <div className="flex bg-[#201f31] rounded-lg overflow-hidden shadow-lg w-full transition-transform hover:scale-[1.02]">
       <Link href={`/media/${media.id}`} className="flex-shrink-0">
         <div className="relative w-24 h-36">
           <Image
-            src={media.coverImage.large}
+            src={coverImage}
             alt={title}
             fill
             sizes="96px"

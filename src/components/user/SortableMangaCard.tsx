@@ -23,12 +23,12 @@ export function SortableMangaCard({ media, onRemove, isEditing }: SortableMangaC
     setNodeRef,
     transform,
     transition,
-  } = useSortable({ id: media.id, disabled: isEditing }); // Deshabilita el dnd cuando se edita
+  } = useSortable({ id: media.id, disabled: !isEditing }); // Deshabilita el dnd cuando NO se edita
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    cursor: isEditing ? 'default' : 'grab',
+    cursor: isEditing ? 'grab' : 'pointer',
     touchAction: 'none'
   };
 
