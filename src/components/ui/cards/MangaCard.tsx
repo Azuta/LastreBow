@@ -1,3 +1,4 @@
+// src/components/ui/cards/MangaCard.tsx
 "use client";
 import React, { useState } from 'react';
 import { Media } from '@/types/AniListResponse';
@@ -7,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 interface MangaCardProps {
   media: Media;
   isPrivate?: boolean;
+  isSelectable?: boolean; // <-- NUEVA PROP
 }
 
 // Iconos
@@ -15,12 +17,11 @@ const LockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height
 const HeartIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
 const PlusIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
 
-const MangaCard = ({ media, isPrivate = false }: MangaCardProps) => {
+const MangaCard = ({ media, isPrivate = false, isSelectable = false }: MangaCardProps) => {
   const { isLoggedIn, profile, favorites, userLists, toggleFavorite, toggleListItem, addToast } = useAuth();
   const [isListMenuOpen, setIsListMenuOpen] = useState(false);
   
   if (!media || !media.title) {
-    // Retorna un placeholder o null si el objeto media no es válido para evitar errores
     return null;
   }
   
@@ -57,9 +58,8 @@ const MangaCard = ({ media, isPrivate = false }: MangaCardProps) => {
     }
   };
 
-  return (
-    <div className="relative aspect-[2/3] w-full rounded-md overflow-hidden group text-white">
-      <Link href={`/media/${media.id}`} className="block w-full h-full">
+  const cardContent = (
+      <>
         <img
           src={media.coverImage.extraLarge}
           alt={title}
@@ -90,55 +90,67 @@ const MangaCard = ({ media, isPrivate = false }: MangaCardProps) => {
             </div>
           </div>
         </div>
-      </Link>
-
-      {isLoggedIn && (
-        <div className="absolute top-2 left-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-            <button
-              onClick={handleFavoriteClick}
-              className={`p-2 rounded-full bg-black/50 backdrop-blur-sm transition-colors ${
-                isFavorite
-                  ? 'text-pink-500 bg-pink-900/50'
-                  : 'text-[#ffbade] hover:bg-[#ffbade] hover:text-black'
-              }`}
-              aria-label="Añadir a favoritos"
-            >
-                <HeartIcon />
-            </button>
-            
-            <div className="relative" onMouseLeave={() => setIsListMenuOpen(false)}>
-               <button 
-                  onMouseEnter={() => setIsListMenuOpen(true)}
-                  className="p-2 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-white hover:text-black transition-colors" 
-                  aria-label="Añadir a lista"
-                >
-                  <PlusIcon />
+        {isLoggedIn && !isSelectable && (
+          <div className="absolute top-2 left-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+              <button
+                onClick={handleFavoriteClick}
+                className={`p-2 rounded-full bg-black/50 backdrop-blur-sm transition-colors ${
+                  isFavorite
+                    ? 'text-pink-500 bg-pink-900/50'
+                    : 'text-[#ffbade] hover:bg-[#ffbade] hover:text-black'
+                }`}
+                aria-label="Añadir a favoritos"
+              >
+                  <HeartIcon />
               </button>
-              {isListMenuOpen && (
-                <div className="absolute left-0 top-full mt-2 w-48 bg-[#2b2d42] rounded-lg shadow-lg py-1 z-30">
-                  {userLists.length > 0 ? (
-                    userLists.map(list => (
-                      <a
-                        key={list.id}
-                        href="#"
-                        onClick={(e) => handleAddToList(e, list.id as unknown as number)}
-                        className="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700"
-                      >
-                        {list.name}
-                      </a>
-                    ))
-                  ) : (
-                    <p className="px-4 py-2 text-sm text-gray-400">No tienes listas.</p>
-                  )}
-                  <div className="border-t border-gray-600 my-1"></div>
-                  <Link href={`/user/${profile?.username}?tab=lists`} className="block px-4 py-2 text-sm text-[#ffbade] hover:bg-gray-700">
-                    Crear nueva lista...
-                  </Link>
-                </div>
-              )}
+              
+              <div className="relative" onMouseLeave={() => setIsListMenuOpen(false)}>
+                 <button 
+                    onMouseEnter={() => setIsListMenuOpen(true)}
+                    className="p-2 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-white hover:text-black transition-colors" 
+                    aria-label="Añadir a lista"
+                  >
+                    <PlusIcon />
+                </button>
+                {isListMenuOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-48 bg-[#2b2d42] rounded-lg shadow-lg py-1 z-30">
+                    {userLists.length > 0 ? (
+                      userLists.map(list => (
+                        <a
+                          key={list.id}
+                          href="#"
+                          onClick={(e) => handleAddToList(e, list.id as unknown as number)}
+                          className="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                        >
+                          {list.name}
+                        </a>
+                      ))
+                    ) : (
+                      <p className="px-4 py-2 text-sm text-gray-400">No tienes listas.</p>
+                    )}
+                    <div className="border-t border-gray-600 my-1"></div>
+                    <Link href={`/user/${profile?.username}?tab=lists`} className="block px-4 py-2 text-sm text-[#ffbade] hover:bg-gray-700">
+                      Crear nueva lista...
+                    </Link>
+                  </div>
+                )}
+              </div>
+          </div>
+        )}
+      </>
+  );
+
+  return (
+    <div className="relative aspect-[2/3] w-full rounded-md overflow-hidden group text-white">
+        {isSelectable ? (
+            <div className="block w-full h-full">
+                {cardContent}
             </div>
-        </div>
-      )}
+        ) : (
+            <Link href={`/media/${media.id}`} className="block w-full h-full">
+                {cardContent}
+            </Link>
+        )}
     </div>
   );
 };

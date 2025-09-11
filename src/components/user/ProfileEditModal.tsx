@@ -5,19 +5,20 @@ import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { createClient } from '@/lib/supabaseClient';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
-// --- Iconos ---
+// --- Iconos (sin cambios) ---
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24"><path d="M18 6L6 18" stroke="currentColor" strokeWidth="2"/><path d="M6 6L18 18" stroke="currentColor" strokeWidth="2"/></svg>;
 const UploadIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>;
 
-// --- LÓGICA DE VALIDACIÓN ---
-const socialLinkValidators: { [key: string]: (url: string) => boolean } = {
+// --- LÓGICA DE VALIDACIÓN (sin cambios) ---
+const socialLinkValidators = {
     twitter: (url) => url.startsWith('https://twitter.com/') || url.startsWith('https://x.com/'),
     discord: (url) => url.startsWith('https://discord.gg/') || url.startsWith('https://discord.com/users/'),
     website: (url) => url.startsWith('http://') || url.startsWith('https://'),
 };
 
-const SocialLinkInput = ({ platform, value, onChange, error }: { platform: string; value: string; onChange: (platform: string, value: string) => void; error?: string }) => {
+const SocialLinkInput = ({ platform, value, onChange, error }) => {
     const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
     const hasError = !!error;
     
@@ -54,6 +55,67 @@ interface ProfileEditModalProps {
   onSave: (updatedProfile: Profile) => Promise<void>; // <-- TIPO DE onSave ACTUALIZADO
 }
 
+// --- CONFIGURACIÓN DE CLOUDFLARE R2 ---
+const R2 = new S3Client({
+  region: "auto",
+  endpoint: process.env.NEXT_PUBLIC_CLOUDFLARE_R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.NEXT_PUBLIC_CLOUDFLARE_R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.NEXT_PUBLIC_CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+  },
+});
+
+const uploadFile = async (file: File, filePath: string) => {
+  if (!file) {
+    throw new Error('No se ha proporcionado un archivo para subir.');
+  }
+
+  const R2_BUCKET_NAME = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_NAME;
+  const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL;
+
+  if (!R2_BUCKET_NAME || !R2_PUBLIC_URL) {
+    throw new Error('Variables de entorno de R2 no configuradas.');
+  }
+
+  // --- LÍNEA CORREGIDA ---
+  // Lee el archivo como un ArrayBuffer para asegurar la compatibilidad
+  const fileContent = await file.arrayBuffer();
+
+  const command = new PutObjectCommand({
+    Bucket: R2_BUCKET_NAME,
+    Key: filePath,
+    Body: Buffer.from(fileContent), // Convierte el ArrayBuffer en un Buffer
+    ContentType: file.type,
+  });
+
+  await R2.send(command);
+  return `${R2_PUBLIC_URL}/${filePath}`;
+};
+
+const deleteFile = async (filePath: string) => {
+  const R2_BUCKET_NAME = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_NAME;
+  
+  if (!R2_BUCKET_NAME) {
+    console.error('Variable de entorno de R2 BUCKET NAME no configurada.');
+    return;
+  }
+
+  const command = new DeleteObjectCommand({
+    Bucket: R2_BUCKET_NAME,
+    Key: filePath,
+  });
+
+  console.log(command);
+
+  try {
+    await R2.send(command);
+    console.log(`Archivo eliminado con éxito: ${filePath}`);
+  } catch (error) {
+    console.error("Error al eliminar archivo:", error);
+  }
+};
+
+
 const ProfileEditModal = ({ isOpen, onClose, onSave }: ProfileEditModalProps) => {
   const { profile, user, updateUserProfile, addToast } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
@@ -68,11 +130,10 @@ const ProfileEditModal = ({ isOpen, onClose, onSave }: ProfileEditModalProps) =>
     bannerFile: null as File | null,
   });
   
-  // --- NUEVO ESTADO PARA ERRORES DE VALIDACIÓN ---
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [errors, setErrors] = useState({});
 
-  const avatarInputRef = useRef<HTMLInputElement>(null);
-  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef(null);
+  const bannerInputRef = useRef(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -86,11 +147,11 @@ const ProfileEditModal = ({ isOpen, onClose, onSave }: ProfileEditModalProps) =>
         avatarFile: null,
         bannerFile: null,
       });
-      setErrors({}); // Limpia errores al abrir
+      setErrors({});
     }
   }, [isOpen, profile]);
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
+  const handleFileChange = (e, type) => {
     const file = e.target.files?.[0];
     if (file) {
       const previewUrl = URL.createObjectURL(file);
@@ -98,12 +159,12 @@ const ProfileEditModal = ({ isOpen, onClose, onSave }: ProfileEditModalProps) =>
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
     setEditData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleSocialLinkChange = (platform: string, value: string) => {
+  const handleSocialLinkChange = (platform, value) => {
     setEditData(prev => {
         const newSocials = { ...prev.social_links };
         if (value) {
@@ -114,7 +175,6 @@ const ProfileEditModal = ({ isOpen, onClose, onSave }: ProfileEditModalProps) =>
         return { ...prev, social_links: newSocials };
     });
 
-    // Validar en tiempo real
     if (value && !socialLinkValidators[platform](value)) {
         setErrors(prev => ({ ...prev, [platform]: `Debe ser un enlace válido de ${platform}.` }));
     } else {
@@ -126,36 +186,65 @@ const ProfileEditModal = ({ isOpen, onClose, onSave }: ProfileEditModalProps) =>
     }
   };
 
-  const handleSave = async () => {
+const handleSave = async () => {
     if (!user || !profile) return;
     
-    // --- VALIDACIÓN ANTES DE GUARDAR ---
     if (Object.keys(errors).length > 0) {
         addToast('Por favor, corrige los enlaces no válidos.', 'error');
         return;
     }
 
     setIsSaving(true);
-    let updates: any = { 
+    let updates = { 
         username: editData.username, 
         bio: editData.bio,
         social_links: editData.social_links
     };
 
     try {
+      // Proceso de subida y borrado para el banner
       if (editData.bannerFile) {
-        const filePath = `${user.id}/banner-${Date.now()}`;
-        const { error } = await supabase.storage.from('profiles').upload(filePath, editData.bannerFile, { upsert: true });
-        if (error) throw error;
-        updates.banner_url = supabase.storage.from('profiles').getPublicUrl(filePath).data.publicUrl;
+        // 1. Sube el nuevo archivo primero
+        const newFilePath = `${user.id}/banner-${Date.now()}-${editData.bannerFile.name}`;
+        const newUrl = await uploadFile(editData.bannerFile, newFilePath);
+        
+        // 2. Si la subida fue exitosa, elimina el archivo anterior si existe
+        if (profile.banner_url) {
+          try {
+              const oldFilePath = profile.banner_url.split(`${user.id}/`)[1];
+              if (oldFilePath) {
+                await deleteFile(`${user.id}/${oldFilePath}`);
+              }
+          } catch (deleteError) {
+              console.error("Error al eliminar el banner anterior, continuando con la subida.", deleteError);
+          }
+        }
+        
+        updates.banner_url = newUrl;
       }
+      
+      // Proceso de subida y borrado para el avatar
       if (editData.avatarFile) {
-        const filePath = `${user.id}/avatar-${Date.now()}`;
-        const { error } = await supabase.storage.from('profiles').upload(filePath, editData.avatarFile, { upsert: true });
-        if (error) throw error;
-        updates.avatar_url = supabase.storage.from('profiles').getPublicUrl(filePath).data.publicUrl;
+        // 1. Sube el nuevo archivo primero
+        const newFilePath = `${user.id}/avatar-${Date.now()}-${editData.avatarFile.name}`;
+        const newUrl = await uploadFile(editData.avatarFile, newFilePath);
+
+        // 2. Si la subida fue exitosa, elimina el archivo anterior si existe
+        if (profile.avatar_url) {
+          try {
+              const oldFilePath = profile.avatar_url.split(`${user.id}/`)[1];
+              if (oldFilePath) {
+                await deleteFile(`${user.id}/${oldFilePath}`);
+              }
+          } catch (deleteError) {
+              console.error("Error al eliminar el avatar anterior, continuando con la subida.", deleteError);
+          }
+        }
+        
+        updates.avatar_url = newUrl;
       }
 
+      // Actualiza el perfil en la base de datos de Supabase
       const success = await updateUserProfile(updates);
       if (success) {
         addToast('Perfil actualizado con éxito', 'success');
@@ -164,8 +253,9 @@ const ProfileEditModal = ({ isOpen, onClose, onSave }: ProfileEditModalProps) =>
       } else {
         addToast('No se pudo actualizar el perfil.', 'error');
       }
-    } catch (error: any) {
-      addToast(error.message || 'Error al subir archivos.', 'error');
+    } catch (error) {
+      const errorMessage = error.message || 'Error desconocido al subir archivos.';
+      addToast(errorMessage, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -182,7 +272,7 @@ const ProfileEditModal = ({ isOpen, onClose, onSave }: ProfileEditModalProps) =>
         </div>
 
         <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-            {/* Banner y Avatar (sin cambios) */}
+            {/* Banner y Avatar (actualizado) */}
             <div className="relative h-32 bg-gray-700 rounded-lg group">
                 {editData.bannerUrl && <Image src={editData.bannerUrl} alt="Banner Preview" layout="fill" objectFit="cover" className="rounded-lg" />}
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-lg" onClick={() => bannerInputRef.current?.click()}>
@@ -208,7 +298,7 @@ const ProfileEditModal = ({ isOpen, onClose, onSave }: ProfileEditModalProps) =>
               <textarea id="bio" name="bio" value={editData.bio} onChange={handleInputChange} rows={3} className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffbade]" />
             </div>
 
-            {/* --- SECCIÓN DE REDES SOCIALES ACTUALIZADA --- */}
+            {/* --- SECCIÓN DE REDES SOCIALES (sin cambios) --- */}
             <div>
                 <h4 className="text-lg font-semibold text-white mb-3">Redes Sociales</h4>
                 <div className="space-y-4">

@@ -1,12 +1,13 @@
-// azuta/mangauserpage/MangaUserPage-main/src/app/register/page.tsx
+// src/app/register/page.tsx
 "use client";
 
 import { useState } from 'react';
 import Link from 'next/link';
+// --- LÍNEA CORREGIDA ---
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/layout/Navbar';
 import PasswordStrengthMeter from '@/components/auth/PasswordStrengthMeter';
-import { useRouter } from 'next/navigation'; // <-- Importa useRouter
+import { useRouter } from 'next/navigation';
 
 const RegisterPage = () => {
   const [email, setEmail] = useState('');
@@ -14,8 +15,9 @@ const RegisterPage = () => {
   const [username, setUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { signUpWithEmail } = useAuth();
-  const router = useRouter(); // <-- Obtén la instancia del router
+  // --- LÍNEA CORREGIDA ---
+  const { signUpWithEmail, addToast } = useAuth();
+  const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,12 +27,10 @@ const RegisterPage = () => {
     const success = await signUpWithEmail(username, email, password);
 
     if (success) {
-      // Al tener éxito, el listener de AuthContext se activará y
-      // redirigirá al usuario a /welcome si es necesario.
-      // Nosotros solo lo sacamos de la página de registro.
-      router.push('/');
+      // El AuthContext maneja la redirección a /welcome después de SIGNED_IN
+      // No es necesario redirigir aquí.
+      addToast('Confirma tu correo para continuar', 'info');
     } else {
-      // El error específico ya se muestra con addToast, pero mantenemos un genérico.
       setError('No se pudo crear la cuenta. El email o usuario puede que ya exista.');
     }
     setIsLoading(false);
