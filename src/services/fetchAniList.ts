@@ -4,23 +4,16 @@ import { createClient } from "@/lib/supabaseClient";
 
 const supabase = createClient();
 
-/**
- * **FUNCIÓN CLAVE DE TRANSFORMACIÓN (ACTUALIZADA)**
- * Convierte un objeto de manga plano de la base de datos
- * al formato anidado que esperan tus componentes de React,
- * manejando correctamente las estructuras con "edges".
- */
 const transformMedia = (dbMedia: any): Media => {
-  // Función auxiliar para extraer datos de la estructura "edges" de forma segura
   const transformEdges = (edgeObject: any) => {
     if (edgeObject && Array.isArray(edgeObject.edges)) {
       return edgeObject.edges.map((edge: any) => ({
-        ...edge.node, // Extrae los datos del manga/personaje/staff
-        ...(edge.relationType && { relationType: edge.relationType }), // Añade el tipo de relación si existe
-        ...(edge.role && { role: edge.role }), // Añade el rol si existe
+        ...edge.node,
+        ...(edge.relationType && { relationType: edge.relationType }),
+        ...(edge.role && { role: edge.role }),
       }));
     }
-    return []; // Devuelve un array vacío si no hay datos
+    return [];
   };
 
   return {
@@ -47,12 +40,10 @@ const transformMedia = (dbMedia: any): Media => {
     type: 'MANGA',
     episodes: dbMedia.episodes,
     trailer: dbMedia.trailer,
-    // --- CAMPOS CORREGIDOS ---
     staff: transformEdges(dbMedia.staff),
     characters: transformEdges(dbMedia.characters),
     relations: transformEdges(dbMedia.relations),
-    // -------------------------
-    recommendations: dbMedia.recommendations || [], // Asumimos que este ya es un array
+    recommendations: dbMedia.recommendations || [],
     comments: dbMedia.comments || [],
   };
 };
@@ -103,4 +94,19 @@ export const fetchMediaById = async (id: number): Promise<Media | null> => {
   }
   
   return transformMedia(data);
+};
+
+export const fetchFavoritesByUserId = async (userId: string): Promise<Media[]> => {
+    const { data, error } = await supabase
+        .from('user_favorites')
+        .select('media:media_id (*)')
+        .eq('user_id', userId);
+
+    if (error) {
+        console.error("Error fetching user favorites:", error);
+        return [];
+    }
+    
+    const mappedAndTransformed = (data || []).map(f => transformMedia(f.media));
+    return mappedAndTransformed;
 };

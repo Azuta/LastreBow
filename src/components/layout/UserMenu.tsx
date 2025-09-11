@@ -20,20 +20,20 @@ const UserMenu = () => {
       />
       <hr className="border-gray-600 my-2" />
 
-      <Link href={`/user/${profile.username}`} className="flex items-center gap-2 px-2 py-2 hover:bg-gray-700 rounded text-txnav">
+      <Link href={`/user/${profile.username}`} className="flex items-center gap-2 px-2 py-2 text-gray-300 hover:bg-gray-700 rounded text-txnav">
         <span>👤</span> Mi Perfil
       </Link>
-      <Link href="/titles/follows" className="flex items-center gap-2 px-2 py-2 hover:bg-gray-700 rounded text-txnav">
+      <Link href="/titles/follows" className="flex items-center gap-2 px-2 py-2 text-gray-300 hover:bg-gray-700 rounded text-txnav">
         <span>👀</span> Mis Seguidos
       </Link>
-      <Link href={`/user/${profile.username}?tab=community`} className="flex items-center gap-2 px-2 py-2 hover:bg-gray-700 rounded text-txnav">
+      <Link href={`/user/${profile.username}?tab=community`} className="flex items-center gap-2 px-2 py-2 text-gray-300 hover:bg-gray-700 rounded text-txnav">
         <span>👥</span> Mis Grupos
       </Link>
       
       <hr className="border-gray-600 my-2" />
 
       {/* --- LÍNEA MODIFICADA --- */}
-      <Link href={`/user/${profile.username}?tab=settings`} className="flex items-center gap-2 px-2 py-2 hover:bg-gray-700 rounded text-txnav">
+      <Link href={`/user/${profile.username}?tab=settings`} className="flex items-center gap-2 px-2 py-2 text-gray-300 hover:bg-gray-700 rounded text-txnav">
           <span>⚙️</span> Configuración
       </Link>
       <button onClick={logout} className="flex items-center gap-2 px-2 py-2 hover:bg-red-800 text-red-400 rounded w-full text-left">

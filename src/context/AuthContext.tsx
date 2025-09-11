@@ -1,4 +1,4 @@
-// azuta/mangauserpage/MangaUserPage-main/src/context/AuthContext.tsx
+// src/context/AuthContext.tsx
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -8,7 +8,7 @@ import { User } from '@supabase/supabase-js';
 import { ToastContainer, ToastProps } from '@/components/ui/Toast';
 import { Media, UserList } from '@/types/AniListResponse';
 
-type ToastType = 'success' | 'error' | 'info';
+type ToastType = 'success' | 'error' | 'info' | 'favorite-add' | 'favorite-remove';
 type Toast = Omit<ToastProps, 'onDismiss'>;
 
 interface Profile {
@@ -46,6 +46,8 @@ interface AuthContextType {
     toggleFollowGroup: (groupId: string, groupName: string) => Promise<void>;
     toggleListItem: (listId: number, media: Media) => Promise<void>;
     addToast: (message: string, type?: ToastType) => void;
+    // --- NUEVA FUNCIÓN ---
+    logUserActivity: (actionType: string, mediaId: number, isPrivate: boolean, actionData?: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -153,15 +155,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (error) addToast(error.message, 'error'); else addToast('Correo de verificación reenviado.', 'success');
     };
 
+    // --- NUEVA FUNCIÓN PARA REGISTRAR ACTIVIDAD ---
+    const logUserActivity = async (actionType: string, mediaId: number, isPrivate: boolean = false, actionData: any = {}) => {
+      if (!user) return;
+      
+      const { error } = await supabase.from('user_activity').insert({
+        user_id: user.id,
+        action_type: actionType,
+        media_id: mediaId,
+        action_data: actionData,
+        is_private: isPrivate,
+      });
+
+      if (error) {
+        console.error("Error al registrar actividad del usuario:", error);
+      }
+    };
+    
     const toggleFavorite = async (media: Media) => {
         if (!user) { addToast('Debes iniciar sesión para añadir a favoritos.', 'error'); return; }
         const isFavorite = favorites.includes(media.id);
         if (isFavorite) {
             const { error } = await supabase.from('user_favorites').delete().match({ user_id: user.id, media_id: media.id });
-            if (!error) setFavorites(favorites.filter(id => id !== media.id));
+            if (!error) {
+                setFavorites(favorites.filter(id => id !== media.id));
+                logUserActivity('remove_favorite', media.id, false, { title: media.title.romaji });
+            }
         } else {
             const { error } = await supabase.from('user_favorites').insert({ user_id: user.id, media_id: media.id });
-            if (!error) setFavorites([...favorites, media.id]);
+            if (!error) {
+                setFavorites([...favorites, media.id]);
+                // La lógica de privacidad para +18 se agregará aquí.
+                const isAdultContent = media.genres.includes('Erotica'); // o alguna otra forma de determinarlo
+                const isPrivate = isAdultContent && profile?.hideAdultContentOnProfile;
+                logUserActivity('add_favorite', media.id, isPrivate, { title: media.title.romaji });
+            }
         }
     };
     
@@ -170,10 +198,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const isFollowing = followedScanGroups.includes(groupId);
         if (isFollowing) {
             const { error } = await supabase.from('user_followed_groups').delete().match({ user_id: user.id, group_id: groupId });
-            if (!error) { setFollowedScanGroups(followedScanGroups.filter(id => id !== groupId)); addToast(`Dejaste de seguir a ${groupName}.`, 'info'); }
+            if (!error) { 
+                setFollowedScanGroups(followedScanGroups.filter(id => id !== groupId)); 
+                addToast(`Dejaste de seguir a ${groupName}.`, 'info'); 
+                logUserActivity('unfollow_group', 0, false, { groupId, groupName });
+            }
         } else {
             const { error } = await supabase.from('user_followed_groups').insert({ user_id: user.id, group_id: groupId });
-            if (!error) { setFollowedScanGroups([...followedScanGroups, groupId]); addToast(`Ahora sigues a ${groupName}.`, 'success'); }
+            if (!error) { 
+                setFollowedScanGroups([...followedScanGroups, groupId]); 
+                addToast(`Ahora sigues a ${groupName}.`, 'success'); 
+                logUserActivity('follow_group', 0, false, { groupId, groupName });
+            }
         }
     };
 
@@ -182,6 +218,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { data, error } = await supabase.from('user_lists').insert({ ...listData, user_id: user.id }).select().single();
         if (error) { addToast(error.message, 'error'); return false; }
         setUserLists([...userLists, data as UserList]);
+        logUserActivity('create_list', 0, !listData.is_public, { listId: data.id, listName: data.name });
         return true;
     };
 
@@ -198,7 +235,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setToasts(currentToasts => currentToasts.filter(toast => toast.id !== id));
     };
 
-    const value = { user, profile, isLoggedIn: !!user, isVerified, favorites, userLists, followedScanGroups, login, logout, signInWithEmail, signUpWithEmail, updateUserProfile, resendVerificationEmail, toggleFavorite, toggleFollowGroup, createList, toggleListItem, addToast };
+    const value = { user, profile, isLoggedIn: !!user, isVerified, favorites, userLists, followedScanGroups, login, logout, signInWithEmail, signUpWithEmail, updateUserProfile, resendVerificationEmail, toggleFavorite, toggleFollowGroup, createList, toggleListItem, addToast, logUserActivity };
 
     return (
         <AuthContext.Provider value={value}>

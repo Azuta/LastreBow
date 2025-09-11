@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 export interface ToastProps {
   id: string | number; // <-- CAMBIADO DE number A string | number
   message: string;
-  type: 'success' | 'error' | 'info';
+  type: 'success' | 'error' | 'info' | 'favorite-add' | 'favorite-remove';
   onDismiss: (id: string | number) => void; // <-- CAMBIADO
 }
 
@@ -14,6 +14,8 @@ const toastColors = {
   success: 'bg-green-600 border-green-500',
   error: 'bg-red-600 border-red-500',
   info: 'bg-blue-600 border-blue-500',
+  'favorite-add': 'bg-pink-900 text-[#ffbade] border-[#ffbade]',
+  'favorite-remove': 'bg-gray-700 text-gray-400 border-gray-600',
 };
 
 const Toast = ({ id, message, type, onDismiss }: ToastProps) => {

@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import { Media } from '@/types/AniListResponse';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface MangaCardProps {
   media: Media;
   isPrivate?: boolean;
-  isSelectable?: boolean; // <-- NUEVA PROP
+  isSelectable?: boolean;
 }
 
 // Iconos
@@ -20,30 +21,38 @@ const PlusIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="non
 const MangaCard = ({ media, isPrivate = false, isSelectable = false }: MangaCardProps) => {
   const { isLoggedIn, profile, favorites, userLists, toggleFavorite, toggleListItem, addToast } = useAuth();
   const [isListMenuOpen, setIsListMenuOpen] = useState(false);
+  const router = useRouter();
   
-  if (!media || !media.title) {
+  if (!media || (!media.title && !media.title_romaji && !media.title_english)) {
     return null;
   }
   
   const isFavorite = favorites.includes(media.id);
-  const title = media.title.english || media.title.romaji;
+  const title = (media.title?.english || media.title_english) || (media.title?.romaji || media.title_romaji);
   const score = media.averageScore ? (media.averageScore / 10).toFixed(2) : 'N/A';
   const genre = media.genres?.[0] || 'Unknown';
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isLoggedIn) {
       addToast("Necesitas iniciar sesión para añadir a favoritos", "error");
       return;
     }
-    toggleFavorite(media);
+    // Llama a la función del contexto para registrar la actividad
+    await toggleFavorite(media);
+    if (isFavorite) {
+        addToast(`${title} eliminado de tus favoritos.`, 'favorite-remove');
+    } else {
+        addToast(`${title} añadido a tus favoritos.`, 'favorite-add');
+    }
   };
   
-  const handleAddToList = (e: React.MouseEvent, listId: number) => {
+  const handleAddToList = async (e: React.MouseEvent, listId: number) => {
     e.preventDefault();
     e.stopPropagation();
-    toggleListItem(listId, media);
+    // Llama a la función del contexto para registrar la actividad
+    await toggleListItem(listId, media);
     setIsListMenuOpen(false);
   }
 
@@ -61,7 +70,7 @@ const MangaCard = ({ media, isPrivate = false, isSelectable = false }: MangaCard
   const cardContent = (
       <>
         <img
-          src={media.coverImage.extraLarge}
+          src={media.coverImage?.extraLarge || media.cover_image_extra_large}
           alt={title}
           className="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
@@ -129,9 +138,12 @@ const MangaCard = ({ media, isPrivate = false, isSelectable = false }: MangaCard
                       <p className="px-4 py-2 text-sm text-gray-400">No tienes listas.</p>
                     )}
                     <div className="border-t border-gray-600 my-1"></div>
-                    <Link href={`/user/${profile?.username}?tab=lists`} className="block px-4 py-2 text-sm text-[#ffbade] hover:bg-gray-700">
+                    <div
+                        onClick={() => router.push(`/user/${profile?.username}?tab=lists`)}
+                        className="block px-4 py-2 text-sm text-[#ffbade] hover:bg-gray-700 cursor-pointer"
+                    >
                       Crear nueva lista...
-                    </Link>
+                    </div>
                   </div>
                 )}
               </div>
