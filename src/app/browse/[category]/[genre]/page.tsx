@@ -1,7 +1,9 @@
+// src/app/browse/all/page.tsx
 "use client";
 
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { fetchAllMediaByCategoryAndGenre } from "@/services/fetchAniList";
+import { notFound } from 'next/navigation';
+import { fetchAllMedia } from "@/services/fetchAniList"; 
 import { Media } from "@/types/AniListResponse";
 import Navbar from "@/components/layout/Navbar";
 import MangaCard from "@/components/ui/cards/MangaCard";
@@ -49,7 +51,7 @@ type SortOptionsKey = keyof typeof SORT_OPTIONS;
 
 // --- Componente principal de la página ---
 const BrowsePage = ({ params: routeParams }: { params: { category: string; genre: string; } }) => {
-    const { viewMode, toggleViewMode, paginationStyle } = useUserPreferences();
+    const { preferences, setPreference } = useUserPreferences();
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -67,7 +69,7 @@ const BrowsePage = ({ params: routeParams }: { params: { category: string; genre
     const [searchTerm, setSearchTerm] = useState("");
 
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = viewMode === 'grid' ? 14 : 7;
+    const ITEMS_PER_PAGE = preferences.viewMode === 'grid' ? 14 : 7;
     const category = decodeURIComponent(routeParams.category);
     const genre = decodeURIComponent(routeParams.genre);
     const pageTitle = genre === 'all' ? category.charAt(0).toUpperCase() + category.slice(1) : genre.charAt(0).toUpperCase() + genre.slice(1);
@@ -79,22 +81,23 @@ const BrowsePage = ({ params: routeParams }: { params: { category: string; genre
         setSelectedStatus(searchParams.get('status')?.split(',').filter(Boolean) || []);
         setSortBy((searchParams.get('sortBy') as SortOptionsKey) || 'POPULARITY_DESC');
         setSearchTerm(searchParams.get('search') || "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Se ejecuta solo al montar el componente
+    }, []);
 
     // Carga inicial de datos, solo cuando cambia la categoría/género de la ruta
     useEffect(() => {
         const loadMedia = async () => {
             setIsLoading(true);
-            const data = await fetchAllMediaByCategoryAndGenre(category, genre);
-            setAllMedia(data);
-            if (genre.toLowerCase() !== 'all' && !searchParams.has('genres')) {
-                setSelectedGenres(prev => [...new Set([...prev, pageTitle])]);
-            }
+            const data = await fetchAllMedia();
+            const filteredData = data.filter(manga => {
+                const categoryMatch = category === 'all' || manga.tags?.some(t => t.name.toLowerCase() === category.toLowerCase());
+                const genreMatch = genre === 'all' || manga.genres.includes(pageTitle);
+                return categoryMatch && genreMatch;
+            });
+            setAllMedia(filteredData);
             setIsLoading(false);
         };
         loadMedia();
-    }, [category, genre]);
+    }, [category, genre, pageTitle]);
 
     // Efecto para sincronizar el estado de los filtros HACIA la URL
     useEffect(() => {
@@ -117,7 +120,7 @@ const BrowsePage = ({ params: routeParams }: { params: { category: string; genre
     const sortedAndFilteredMedia = useMemo(() => {
         const filtered = allMedia.filter(media => {
             const searchMatch = !searchTerm || (media.title.english?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || (media.title.romaji?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-            const genreMatch = selectedGenres.length === 0 || selectedGenres.every(g => media.genres.includes(g));
+            const genreMatch = selectedGenres.length === 0 || selectedGenres.some(g => media.genres.includes(g));
             const formatMatch = selectedFormats.length === 0 || selectedFormats.includes(media.format);
             const statusMatch = selectedStatus.length === 0 || selectedStatus.includes(media.status);
             return searchMatch && genreMatch && formatMatch && statusMatch;
@@ -126,28 +129,33 @@ const BrowsePage = ({ params: routeParams }: { params: { category: string; genre
             switch (sortBy) {
                 case 'SCORE_DESC': return (b.averageScore || 0) - (a.averageScore || 0);
                 case 'TITLE_ROMAJI': return a.title.romaji.localeCompare(b.title.romaji);
-                default: return b.popularity - a.popularity;
+                default: return (b.popularity || 0) - (a.popularity || 0);
             }
         });
     }, [allMedia, searchTerm, selectedGenres, selectedFormats, selectedStatus, sortBy]);
+    
+    useEffect(() => {
+      setCurrentPage(1);
+    }, [sortedAndFilteredMedia]);
+
 
     const totalPages = Math.ceil(sortedAndFilteredMedia.length / ITEMS_PER_PAGE);
     const currentItems = useMemo(() => {
-        if (paginationStyle === 'infinite') return sortedAndFilteredMedia.slice(0, currentPage * ITEMS_PER_PAGE);
+        if (preferences.paginationStyle === 'infinite') return sortedAndFilteredMedia.slice(0, currentPage * ITEMS_PER_PAGE);
         const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
         const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
         return sortedAndFilteredMedia.slice(indexOfFirstItem, indexOfLastItem);
-    }, [sortedAndFilteredMedia, currentPage, ITEMS_PER_PAGE, paginationStyle]);
+    }, [sortedAndFilteredMedia, currentPage, ITEMS_PER_PAGE, preferences.paginationStyle]);
 
     const observer = useRef<IntersectionObserver>();
     const lastElementRef = useCallback((node: HTMLElement | null) => {
-        if (isLoading || paginationStyle !== 'infinite') return;
+        if (isLoading || preferences.paginationStyle !== 'infinite') return;
         if (observer.current) observer.current.disconnect();
         observer.current = new IntersectionObserver(entries => {
             if (entries[0].isIntersecting && currentPage < totalPages) setCurrentPage(prev => prev + 1);
         });
         if (node) observer.current.observe(node);
-    }, [isLoading, paginationStyle, currentPage, totalPages]);
+    }, [isLoading, preferences.paginationStyle, currentPage, totalPages]);
 
     const handlePageChange = (page: number) => {
         if (page < 1 || page > totalPages) return;
@@ -187,22 +195,22 @@ const BrowsePage = ({ params: routeParams }: { params: { category: string; genre
                         </select>
                         <button onClick={() => setIsFiltersOpen(true)} className="flex items-center gap-2 px-4 py-1.5 bg-gray-700/50 hover:bg-gray-600/80 text-gray-300 rounded-full text-sm font-semibold transition-colors"><FilterIcon />Filtros</button>
                         <div className="flex items-center bg-gray-700/50 rounded-full p-1">
-                            <button onClick={toggleViewMode} className={`p-1.5 rounded-full ${viewMode === 'grid' ? 'bg-[#ffbade] text-black' : 'text-gray-300'}`}><GridIcon /></button>
-                            <button onClick={toggleViewMode} className={`p-1.5 rounded-full ${viewMode === 'list' ? 'bg-[#ffbade] text-black' : 'text-gray-300'}`}><ListIcon /></button>
+                            <button onClick={() => { setPreference('viewMode', 'grid'); }} className={`p-1.5 rounded-full ${preferences.viewMode === 'grid' ? 'bg-[#ffbade] text-black' : 'text-gray-300'}`}><GridIcon /></button>
+                            <button onClick={() => { setPreference('viewMode', 'list'); }} className={`p-1.5 rounded-full ${preferences.viewMode === 'list' ? 'bg-[#ffbade] text-black' : 'text-gray-300'}`}><ListIcon /></button>
                         </div>
                     </div>
                 </div>
                 
                 {isLoading ? <p className="text-center text-white">Cargando mangas...</p> : (
                     <>
-                        <div className={viewMode === 'grid' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-x-4 gap-y-6" : "flex flex-col gap-4"}>
+                        <div className={preferences.viewMode === 'grid' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-x-4 gap-y-6" : "flex flex-col gap-4"}>
                             {currentItems.map((media, index) => (
                                 <div key={media.id} ref={index === currentItems.length - 1 ? lastElementRef : null}>
-                                    {viewMode === 'grid' ? <MangaCard media={media} /> : <MangaCardList media={media} />}
+                                    {preferences.viewMode === 'grid' ? <MangaCard media={media} /> : <MangaCardList media={media} />}
                                 </div>
                             ))}
                         </div>
-                        {totalPages > 1 && paginationStyle === 'pagination' && (
+                        {totalPages > 1 && preferences.paginationStyle === 'pagination' && (
                             <div className="flex justify-center items-center mt-12">
                                 <nav className="flex items-center gap-2" aria-label="Pagination">
                                     <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600/80 text-gray-300 rounded-md text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Anterior</button>

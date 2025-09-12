@@ -56,7 +56,7 @@ const MOCK_USERS: { [key: string]: { followedIds: number[] } } = {
 
 const BrowseAllPage = () => {
   // Obtiene las preferencias del usuario del contexto, pero no el setter
-  const { preferences } = useUserPreferences();
+  const { preferences, setPreference } = useUserPreferences();
   const paginationStyle = preferences.paginationStyle;
   
   const router = useRouter();
@@ -241,8 +241,8 @@ const BrowseAllPage = () => {
                     </select>
                     <button onClick={() => setIsFiltersOpen(true)} disabled={!!isViewingSharedList} className="flex items-center gap-2 px-4 py-1.5 bg-gray-700/50 hover:bg-gray-600/80 text-gray-300 rounded-full text-sm font-semibold transition-colors disabled:opacity-50"><FilterIcon />Filtros</button>
                     <div className="flex items-center bg-gray-700/50 rounded-full p-1">
-                        <button onClick={() => setLocalViewMode('grid')} className={`p-1.5 rounded-full ${localViewMode === 'grid' ? 'bg-[#ffbade] text-black' : 'text-gray-300'}`}><GridIcon /></button>
-                        <button onClick={() => setLocalViewMode('list')} className={`p-1.5 rounded-full ${localViewMode === 'list' ? 'bg-[#ffbade] text-black' : 'text-gray-300'}`}><ListIcon /></button>
+                        <button onClick={() => setPreference('viewMode', 'grid')} className={`p-1.5 rounded-full ${preferences.viewMode === 'grid' ? 'bg-[#ffbade] text-black' : 'text-gray-300'}`}><GridIcon /></button>
+                        <button onClick={() => setPreference('viewMode', 'list')} className={`p-1.5 rounded-full ${preferences.viewMode === 'list' ? 'bg-[#ffbade] text-black' : 'text-gray-300'}`}><ListIcon /></button>
                     </div>
                      <div className="flex items-center space-x-2 bg-gray-700/50 rounded-full p-1">
                         <button 
