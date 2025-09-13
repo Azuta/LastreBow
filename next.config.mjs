@@ -28,6 +28,12 @@ const nextConfig = {
           protocol: "https",
           hostname: "pub-055d6b8ce9d54aa7ae23cf1ae2e84130.r2.dev",
         },
+        // CAMBIO: Añade el nuevo URL público del bucket de grupos
+        {
+          protocol: "https",
+          hostname: "pub-3b562634da1e4acc802552c383108bd8.r2.dev", // Reemplaza esto con tu URL público real si es diferente
+        },
+
       ],
     },
 };

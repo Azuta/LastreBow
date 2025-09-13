@@ -25,8 +25,8 @@ const R2 = new S3Client({
     secretAccessKey: process.env.NEXT_PUBLIC_CLOUDFLARE_R2_SECRET_ACCESS_KEY,
   },
 });
-const R2_BUCKET_NAME = process.env.R2_COVERS_BUCKET_NAME;
-const R2_PUBLIC_URL = process.env.R2_COVERS_PUBLIC_URL;
+const R2_BUCKET_NAME = process.env.NEXT_PUBLIC_R2_COVERS_BUCKET_NAME;
+const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_COVERS_PUBLIC_URL;
 
 const fullMediaQuery = `
 query ($page: Int, $perPage: Int) {

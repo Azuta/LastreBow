@@ -21,14 +21,11 @@ interface Profile {
     banner_url?: string;
     social_links?: { [key: string]: string };
     hide_adult_content_on_profile: boolean;
-    // Se elimina primary_scan_id y primary_scan_name
     scan_group_id?: string | null;
-    // Se añade un objeto opcional para los datos del grupo
     scan_groups?: ScanGroup | null;
     followed_groups: string[];
 }
 
-// Nueva interfaz para la información del grupo de escaneo
 interface ScanGroup {
     id: string;
     name: string;
@@ -55,9 +52,9 @@ interface AuthContextType {
     isVerified: boolean;
     favorites: Media[];
     userLists: UserList[];
+    followedScanGroups: string[];
     login: () => Promise<void>;
     logout: () => Promise<void>;
-    followedScanGroups: string[];
     signInWithEmail: (email: string, password: string) => Promise<boolean>;
     signUpWithEmail: (username: string, email: string, password: string) => Promise<boolean>;
     updateUserProfile: (updates: ProfileUpdate) => Promise<Profile | null>;
@@ -71,6 +68,8 @@ interface AuthContextType {
     addMangasToList: (listId: string, mediaIds: number[]) => Promise<void>;
     removeMangaFromList: (listId: string, mediaId: number) => Promise<void>;
     updatePrimaryScan: (scanId: string | null) => Promise<void>;
+    createGroup: (name: string, description: string) => Promise<string | null>;
+    updateGroupImagesAndSocials: (groupId: string, updates: { logo_url?: string | null, banner_url?: string | null, social_links?: any }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -87,50 +86,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [toasts, setToasts] = useState<Toast[]>([]);
     const router = useRouter();
     
-    // Función para añadir toasts
     const addToast = (message: string, type: ToastType = 'info') => {
         const newToast = { id: Date.now(), message, type };
         setToasts(prev => [...prev, newToast]);
     };
     
-    // Función para eliminar toasts
     const removeToast = (id: number) => {
         setToasts(prev => prev.filter(t => t.id !== id));
     };
 
-const fetchUserData = async (user: User): Promise<Profile | null> => {
-    // La consulta ahora selecciona la relación correctamente
-    const { data, error } = await supabase
-        .from('profiles')
-        .select(`*, scan_groups!profiles_scan_group_id_fkey(id, name)`)
-        .eq('id', user.id)
-        .single();
+    const fetchUserData = async (user: User): Promise<Profile | null> => {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select(`*, scan_groups!profiles_scan_group_id_fkey(id, name)`)
+            .eq('id', user.id)
+            .single();
 
-    if (error) {
-        console.error("Error fetching profile:", error);
-        return null;
-    }
+        if (error) {
+            console.error("Error fetching profile:", error);
+            return null;
+        }
 
-    // Mapeamos los datos de la base de datos a la interfaz de perfil
-    const profileData = {
-        ...data,
-        // El objeto `scan_groups` ya viene anidado en los datos
-    } as Profile;
-    
-    // ... (restablece los estados y retorna el perfil)
-    setProfile(profileData);
-    const favoritesData = await fetchFavoritesByUserId(profileData.id);
-    setFavorites(favoritesData || []);
-    
-    const { data: listsData } = await supabase.from('user_lists').select(`*, user:profiles!user_id(username)`).eq('user_id', profileData.id);
-    setUserLists(listsData as UserList[] || []);
-    
-    const { data: followedGroupsData } = await supabase.from('user_followed_groups').select('group_id').eq('user_id', profileData.id);
-    setFollowedScanGroups(followedGroupsData?.map(group => group.group_id) || []);
-    return profileData;
+        const profileData = {
+            ...data,
+        } as Profile;
+        
+        setProfile(profileData);
+        const favoritesData = await fetchFavoritesByUserId(profileData.id);
+        setFavorites(favoritesData || []);
+        
+        const { data: listsData } = await supabase.from('user_lists').select(`*, user:profiles!user_id(username)`).eq('user_id', profileData.id);
+        setUserLists(listsData as UserList[] || []);
+        
+        const { data: followedGroupsData } = await supabase.from('user_followed_groups').select('group_id').eq('user_id', profileData.id);
+        setFollowedScanGroups(followedGroupsData?.map(group => group.group_id) || []);
+        return profileData;
 
-};
-
+    };
 
     const handleAuthChange = async () => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -212,7 +204,6 @@ const fetchUserData = async (user: User): Promise<Profile | null> => {
         return data as Profile;
     };
     
-    // Lógica para el toggle de favoritos
     const toggleFavorite = async (media: Media) => {
         if (!user) {
             addToast("Necesitas iniciar sesión para añadir a favoritos.", "error");
@@ -250,7 +241,7 @@ const fetchUserData = async (user: User): Promise<Profile | null> => {
         }
         const { data, error } = await supabase
             .from('user_lists')
-            .insert({ user_id: user.id, name: listData.name, is_private: listData.is_private })
+            .insert({ user_id: user.id, name: listData.name, is_public: listData.is_private })
             .select()
             .single();
 
@@ -405,22 +396,53 @@ const fetchUserData = async (user: User): Promise<Profile | null> => {
         }
     };
     
-const updatePrimaryScan = async (scanId: string | null) => {
-    if (!user) return;
+    const updatePrimaryScan = async (scanId: string | null) => {
+        if (!user) return;
+        
+        const { error } = await supabase
+            .from('profiles')
+            .update({ scan_group_id: scanId })
+            .eq('id', user.id);
+        
+        if (error) {
+            addToast(`Error al guardar el scan.`, 'error');
+            console.error(error);
+        } else {
+            await fetchUserData(user);
+            addToast(`Scan actualizado con éxito.`, 'success');
+        }
+    };
+
+    const createGroup = async (name: string, description: string): Promise<string | null> => {
+        if (!user) return null;
+        
+        const { data, error } = await supabase
+            .from('scan_groups')
+            .insert({ name, description, owner_id: user.id })
+            .select('id')
+            .single();
+
+        if (error) {
+            console.error("Error creating group:", error);
+            return null;
+        }
+
+        return data.id;
+    };
     
-    const { error } = await supabase
-        .from('profiles')
-        .update({ scan_group_id: scanId })
-        .eq('id', user.id);
-    
-    if (error) {
-        addToast(`Error al guardar el scan.`, 'error');
-        console.error(error);
-    } else {
-        await fetchUserData(user);
-        addToast(`Scan actualizado con éxito.`, 'success');
-    }
-};
+    const updateGroupImagesAndSocials = async (groupId: string, updates: { logo_url?: string | null, banner_url?: string | null, social_links?: any }) => {
+        if (!user) return;
+        
+        const { error } = await supabase
+            .from('scan_groups')
+            .update(updates)
+            .eq('id', groupId);
+
+        if (error) {
+            console.error("Error updating group images and socials:", error);
+            addToast("Error al actualizar la información del grupo.", 'error');
+        }
+    };
 
     const value = {
         user,
@@ -445,6 +467,8 @@ const updatePrimaryScan = async (scanId: string | null) => {
         addMangasToList,
         removeMangaFromList,
         updatePrimaryScan,
+        createGroup,
+        updateGroupImagesAndSocials,
     };
 
     return (

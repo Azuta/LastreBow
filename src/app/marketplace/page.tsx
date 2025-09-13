@@ -49,6 +49,14 @@ const MOCK_PLUGINS: Plugin[] = [
         isInstalled: false,
         icon: '📈',
     },
+        {
+        id: 'scan-analytics-asdaspro',
+        type: 'scan',
+        name: 'Nombre del scan detalles extra como colores, iconos, bordes al perfil',
+        description: 'Agregar detalles extra al nombre, perfil, banner del scan',
+        isInstalled: false,
+        icon: '📈',
+    },
 ];
 
 const supabase = createClientComponentClient();

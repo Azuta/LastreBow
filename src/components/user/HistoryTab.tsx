@@ -26,6 +26,7 @@ const actionMessages = {
     create_list: (data) => `creó la lista "${data.listName}".`,
     new_review: (data) => `escribió una reseña para ${data.title}.`,
     new_comment: (data) => `dejó un comentario en la página de ${data.title}.`,
+    visit_media: (data) => `visitó la página de ${data.title}.`,
 };
 
 const HistoryTab = ({ activity, isOwnProfile, hideAdultContentOnProfile }: HistoryTabProps) => {
@@ -48,21 +49,24 @@ const HistoryTab = ({ activity, isOwnProfile, hideAdultContentOnProfile }: Histo
     
     return (
         <div className="space-y-4 py-8">
-            {visibleActivity.map(item => (
-                <div key={item.id} className="bg-[#201f31] p-4 rounded-lg flex items-center gap-4">
-                    <div className="flex-shrink-0 text-[#ffbade]">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 12 11 15"></polyline></svg>
+            {visibleActivity.map(item => {
+                const messageFunc = actionMessages[item.action_type];
+                return (
+                    <div key={item.id} className="bg-[#201f31] p-4 rounded-lg flex items-center gap-4">
+                        <div className="flex-shrink-0 text-[#ffbade]">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 12 11 15"></polyline></svg>
+                        </div>
+                        <p className="text-sm text-white">
+                            <span className="font-semibold text-[#ffbade]">{isOwnProfile ? 'Tú' : 'El usuario'}</span>{' '}
+                            {typeof messageFunc === 'function' ? messageFunc(item.action_data) : `realizó una acción desconocida (${item.action_type}).`}
+                        </p>
+                        <span className="ml-auto text-xs text-gray-500">
+                            {new Date(item.created_at).toLocaleDateString()}
+                        </span>
+                        {item.is_private && <span className="text-xs text-red-500">(Privado)</span>}
                     </div>
-                    <p className="text-sm text-white">
-                        <span className="font-semibold text-[#ffbade]">{isOwnProfile ? 'Tú' : 'El usuario'}</span>{' '}
-                        {actionMessages[item.action_type](item.action_data)}
-                    </p>
-                    <span className="ml-auto text-xs text-gray-500">
-                        {new Date(item.created_at).toLocaleDateString()}
-                    </span>
-                    {item.is_private && <span className="text-xs text-red-500">(Privado)</span>}
-                </div>
-            ))}
+                );
+            })}
         </div>
     );
 };
