@@ -1,6 +1,5 @@
 // src/context/AuthContext.tsx
 "use client";
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
@@ -8,7 +7,6 @@ import { User } from '@supabase/supabase-js';
 import { ToastContainer, ToastProps } from '@/components/ui/Toast';
 import { Media, UserList } from '@/types/AniListResponse';
 import { fetchFavoritesByUserId } from '@/services/fetchAniList';
-
 
 type ToastType = 'success' | 'error' | 'info' | 'favorite-add' | 'favorite-remove';
 type Toast = Omit<ToastProps, 'onDismiss'>;
@@ -18,16 +16,37 @@ interface Profile {
     username: string;
     avatar_url: string;
     role: string;
-    scan_group_id?: string | null;
     has_completed_onboarding: boolean;
     bio?: string;
     banner_url?: string;
     social_links?: { [key: string]: string };
+    hide_adult_content_on_profile: boolean;
+    // Se elimina primary_scan_id y primary_scan_name
+    scan_group_id?: string | null;
+    // Se añade un objeto opcional para los datos del grupo
+    scan_groups?: ScanGroup | null;
+    followed_groups: string[];
 }
 
-type NewListData = { name: string; description: string; is_public: boolean };
+// Nueva interfaz para la información del grupo de escaneo
+interface ScanGroup {
+    id: string;
+    name: string;
+}
 
-type ProfileUpdate = Partial<Profile>;
+interface ProfileUpdate {
+    username?: string;
+    avatar_url?: string;
+    bio?: string;
+    banner_url?: string;
+    social_links?: { [key: string]: string };
+    hide_adult_content_on_profile?: boolean;
+}
+
+interface NewListData {
+    name: string;
+    is_private: boolean;
+}
 
 interface AuthContextType {
     user: User | null;
@@ -51,6 +70,7 @@ interface AuthContextType {
     logUserActivity: (actionType: string, mediaId: number | null, isPrivate: boolean, actionData?: any) => Promise<void>;
     addMangasToList: (listId: string, mediaIds: number[]) => Promise<void>;
     removeMangaFromList: (listId: string, mediaId: number) => Promise<void>;
+    updatePrimaryScan: (scanId: string | null) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,257 +79,373 @@ const supabase = createClient();
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<Profile | null>(null);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isVerified, setIsVerified] = useState(false);
     const [favorites, setFavorites] = useState<Media[]>([]);
     const [userLists, setUserLists] = useState<UserList[]>([]);
-    const [toasts, setToasts] = useState<Toast[]>([]);
     const [followedScanGroups, setFollowedScanGroups] = useState<string[]>([]);
+    const [toasts, setToasts] = useState<Toast[]>([]);
     const router = useRouter();
-
-    const isVerified = !!user?.email_confirmed_at;
-
-    useEffect(() => {
-        const getSessionAndData = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                setUser(session.user);
-                await fetchUserData(session.user);
-            }
-        };
-        getSessionAndData();
-
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-            setUser(session?.user ?? null);
-            if (session?.user) {
-                const fetchedProfile = await fetchUserData(session.user);
-                if (event === 'SIGNED_IN' && fetchedProfile && !fetchedProfile.has_completed_onboarding) {
-                    router.push('/welcome');
-                }
-            } else {
-                setProfile(null);
-                setFavorites([]);
-                setUserLists([]);
-                setFollowedScanGroups([]);
-            }
-        });
-
-        return () => {
-            authListener.subscription.unsubscribe();
-        };
-    }, [router]);
-
-    const fetchUserData = async (user: User): Promise<Profile | null> => {
-        const { data: profileData, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        if (error) {
-            console.error("Error fetching profile:", error);
-            setProfile(null);
-            return null;
-        }
-        setProfile(profileData);
-        const favoritesData = await fetchFavoritesByUserId(profileData.id);
-        setFavorites(favoritesData || []);
-        
-        const { data: listsData } = await supabase.from('user_lists').select(`*, user:profiles!user_id(username)`).eq('user_id', profileData.id);
-        setUserLists(listsData as UserList[] || []);
-        
-        const { data: followedGroupsData } = await supabase.from('user_followed_groups').select('group_id').eq('user_id', profileData.id);
-        setFollowedScanGroups(followedGroupsData?.map(group => group.group_id) || []);
-        return profileData;
+    
+    // Función para añadir toasts
+    const addToast = (message: string, type: ToastType = 'info') => {
+        const newToast = { id: Date.now(), message, type };
+        setToasts(prev => [...prev, newToast]);
+    };
+    
+    // Función para eliminar toasts
+    const removeToast = (id: number) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
     };
 
-    const login = async () => { await supabase.auth.signInWithOAuth({ provider: 'discord' }); };
-    const logout = async () => { await supabase.auth.signOut(); router.push('/'); };
-    const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) { addToast(error.message, 'error'); return false; }
-        return true;
-    };
+const fetchUserData = async (user: User): Promise<Profile | null> => {
+    // La consulta ahora selecciona la relación correctamente
+    const { data, error } = await supabase
+        .from('profiles')
+        .select(`*, scan_groups!profiles_scan_group_id_fkey(id, name)`)
+        .eq('id', user.id)
+        .single();
 
-const signUpWithEmail = async (username: string, email: string, password: string): Promise<boolean> => {
-    // BUG FIX: Añadimos un bloque try/catch para una captura de errores más robusta
-    try {
-        const { data, error } = await supabase.auth.signUp({
-            email, password,
-            options: {
-                data: { username, avatar_url: `https://i.pravatar.cc/150?u=${username}` },
-                emailRedirectTo: `${window.location.origin}/auth/callback`,
-            },
-        });
-        
-        if (error) { 
-            throw new Error(error.message); 
-        }
-
-        if (data.user?.identities?.length === 0) {
-            throw new Error('El correo electrónico ya existe. Por favor, inicia sesión o usa otro correo.');
-        }
-
-        addToast('Confirma tu correo para continuar', 'info');
-        return true;
-
-    } catch (error) {
-        let errorMessage = 'No se pudo crear la cuenta. Inténtalo de nuevo más tarde.';
-        if (error instanceof Error) {
-            errorMessage = error.message;
-        }
-        addToast(errorMessage, 'error'); 
-        console.error("Error en signUpWithEmail:", error);
-        return false;
+    if (error) {
+        console.error("Error fetching profile:", error);
+        return null;
     }
+
+    // Mapeamos los datos de la base de datos a la interfaz de perfil
+    const profileData = {
+        ...data,
+        // El objeto `scan_groups` ya viene anidado en los datos
+    } as Profile;
+    
+    // ... (restablece los estados y retorna el perfil)
+    setProfile(profileData);
+    const favoritesData = await fetchFavoritesByUserId(profileData.id);
+    setFavorites(favoritesData || []);
+    
+    const { data: listsData } = await supabase.from('user_lists').select(`*, user:profiles!user_id(username)`).eq('user_id', profileData.id);
+    setUserLists(listsData as UserList[] || []);
+    
+    const { data: followedGroupsData } = await supabase.from('user_followed_groups').select('group_id').eq('user_id', profileData.id);
+    setFollowedScanGroups(followedGroupsData?.map(group => group.group_id) || []);
+    return profileData;
+
 };
 
 
-    const updateUserProfile = async (updates: ProfileUpdate): Promise<Profile | null> => {
-        if (!user) return null;
-        const { data, error } = await supabase
-            .from('profiles')
-            .update(updates)
-            .eq('id', user.id)
-            .select()
-            .single();
-            
+    const handleAuthChange = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+        setIsLoggedIn(!!user);
+        setIsVerified(!!user?.email_confirmed_at);
+        if (user) {
+            await fetchUserData(user);
+        } else {
+            setProfile(null);
+            setFavorites([]);
+            setUserLists([]);
+            setFollowedScanGroups([]);
+        }
+    };
+
+    useEffect(() => {
+        handleAuthChange();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+            handleAuthChange();
+        });
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const signInWithEmail = async (email: string, password: string) => {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
             addToast(error.message, 'error');
-            return null;
+            return false;
         }
-        
-        setProfile(data as Profile);
-        return data as Profile;
-    };
-    
-    const resendVerificationEmail = async () => {
-        if (!user) return;
-        const { error } = await supabase.auth.resend({ type: 'signup', email: user.email! });
-        if (error) addToast(error.message, 'error'); else addToast('Correo de verificación reenviado.', 'success');
-    };
-
-    const logUserActivity = async (actionType: string, mediaId: number | null, isPrivate: boolean = false, actionData: any = {}) => {
-      if (!user) return;
-      
-      const insertData: { [key: string]: any } = {
-        user_id: user.id,
-        action_type: actionType,
-        action_data: actionData,
-        is_private: isPrivate,
-      };
-
-      if (mediaId !== null) {
-        insertData.media_id = mediaId;
-      }
-      
-      const { error } = await supabase.from('user_activity').insert(insertData);
-
-      if (error) {
-        console.error("Error al registrar actividad del usuario:", error);
-      }
-    };
-    
-    const toggleFavorite = async (media: Media) => {
-        if (!user) { addToast('Debes iniciar sesión para añadir a favoritos.', 'error'); return; }
-        const isFavorite = favorites.some(fav => fav.id === media.id);
-        if (isFavorite) {
-            const { error } = await supabase.from('user_favorites').delete().match({ user_id: user.id, media_id: media.id });
-            if (!error) {
-                setFavorites(favorites.filter(fav => fav.id !== media.id));
-                logUserActivity('remove_favorite', media.id, false, { title: media.title.romaji });
-            }
-        } else {
-            const { error } = await supabase.from('user_favorites').insert({ user_id: user.id, media_id: media.id });
-            if (!error) {
-                setFavorites([...favorites, media]);
-                const isAdultContent = media.genres.includes('Erotica');
-                const isPrivate = isAdultContent && profile?.hideAdultContentOnProfile;
-                logUserActivity('add_favorite', media.id, isPrivate, { title: media.title.romaji });
-            }
-        }
-    };
-    
-    const toggleFollowGroup = async (groupId: string, groupName: string) => {
-        if (!user) { addToast('Debes iniciar sesión para seguir a un grupo.', 'error'); return; }
-        const isFollowing = followedScanGroups.includes(groupId);
-        if (isFollowing) {
-            const { error } = await supabase.from('user_followed_groups').delete().match({ user_id: user.id, group_id: groupId });
-            if (!error) { 
-                setFollowedScanGroups(followedScanGroups.filter(id => id !== groupId)); 
-                addToast(`Dejaste de seguir a ${groupName}.`, 'info'); 
-                logUserActivity('unfollow_group', null, false, { groupId, groupName });
-            }
-        } else {
-            const { error } = await supabase.from('user_followed_groups').insert({ user_id: user.id, group_id: groupId });
-            if (!error) { 
-                setFollowedScanGroups([...followedScanGroups, groupId]); 
-                addToast(`Ahora sigues a ${groupName}.`, 'success'); 
-                logUserActivity('follow_group', null, false, { groupId, groupName });
-            }
-        }
-    };
-
-    const createList = async (listData: NewListData): Promise<boolean> => {
-        if (!user) return false;
-        const { data, error } = await supabase.from('user_lists').insert({ ...listData, user_id: user.id }).select().single();
-        if (error) { 
-            addToast(error.message, 'error'); 
-            return false; 
-        }
-        setUserLists([...userLists, data as UserList]);
-        if (data.id) {
-          logUserActivity('create_list', null, !listData.is_public, { listId: data.id, listName: data.name });
-        }
+        addToast("Inicio de sesión exitoso. ¡Bienvenido de nuevo!", 'success');
         return true;
     };
 
-    const toggleListItem = async (listId: number, media: Media) => {
-        addToast("Función 'Añadir a lista' aún no implementada.", 'info');
-    };
-
-    const addMangasToList = async (listId: string, mediaIds: number[]) => {
-      if (!user) {
-          addToast('Debes iniciar sesión para añadir mangas a una lista.', 'error');
-          return;
-      }
-      const itemsToInsert = mediaIds.map(mediaId => ({
-          list_id: listId,
-          media_id: mediaId
-      }));
-      const { error } = await supabase.from('list_items').insert(itemsToInsert);
-      if (error) {
-          console.error("Error al añadir mangas a la lista:", error);
-          addToast('Hubo un error al añadir los mangas.', 'error');
-      } else {
-          addToast(`Se añadieron ${mediaIds.length} manga(s) a la lista.`, 'success');
-          logUserActivity('add_to_list', null, false, { listId, mangaCount: mediaIds.length });
-      }
-    };
-    
-    // --- NUEVA FUNCIÓN AÑADIDA ---
-    const removeMangaFromList = async (listId: string, mediaId: number) => {
-        if (!user) {
-            addToast('Debes iniciar sesión para eliminar mangas de una lista.', 'error');
-            return;
-        }
-
-        const { error } = await supabase.from('list_items').delete().match({
-            list_id: listId,
-            media_id: mediaId,
+    const signUpWithEmail = async (username: string, email: string, password: string) => {
+        const { data: { user: newUser }, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { username } },
         });
 
         if (error) {
-            console.error("Error al eliminar manga de la lista:", error);
-            addToast('Hubo un error al eliminar el manga.', 'error');
+            addToast(error.message, 'error');
+            return false;
+        }
+
+        if (newUser) {
+            await supabase.from('profiles').insert({
+                id: newUser.id,
+                username: username,
+                avatar_url: newUser.user_metadata.avatar_url,
+                role: 'user',
+            });
+            addToast("Registro exitoso. Por favor, revisa tu correo para verificar tu cuenta.", 'success');
+            return true;
+        }
+        return false;
+    };
+
+    const logout = async () => {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            console.error("Error logging out:", error);
+            addToast("Error al cerrar sesión.", 'error');
         } else {
-            addToast('Manga eliminado de la lista.', 'favorite-remove');
+            router.push('/login');
+            addToast("Sesión cerrada correctamente.", 'success');
         }
     };
 
-    const addToast = (message: string, type: ToastType = 'info') => {
-        const newToast: Toast = { id: crypto.randomUUID(), message, type };
-        setToasts(currentToasts => [...currentToasts, newToast]);
+    const updateUserProfile = async (updates: ProfileUpdate): Promise<Profile | null> => {
+        if (!user) return null;
+        const { data, error } = await supabase.from('profiles').update(updates).eq('id', user.id).select().single();
+        if (error) {
+            console.error("Error updating profile:", error);
+            return null;
+        }
+        setProfile(prev => prev ? { ...prev, ...data } : null);
+        return data as Profile;
+    };
+    
+    // Lógica para el toggle de favoritos
+    const toggleFavorite = async (media: Media) => {
+        if (!user) {
+            addToast("Necesitas iniciar sesión para añadir a favoritos.", "error");
+            return;
+        }
+        
+        const isCurrentlyFavorite = favorites.some(fav => fav.id === media.id);
+        if (isCurrentlyFavorite) {
+            const { error } = await supabase
+                .from('user_favorites')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('media_id', media.id);
+            if (!error) {
+                setFavorites(favorites.filter(fav => fav.id !== media.id));
+            } else {
+                console.error("Error removing favorite:", error);
+            }
+        } else {
+            const { error } = await supabase
+                .from('user_favorites')
+                .insert({ user_id: user.id, media_id: media.id });
+            if (!error) {
+                setFavorites([...favorites, media]);
+            } else {
+                console.error("Error adding favorite:", error);
+            }
+        }
+    };
+    
+    const createList = async (listData: NewListData) => {
+        if (!user) {
+            addToast("Debes iniciar sesión para crear una lista.", "error");
+            return false;
+        }
+        const { data, error } = await supabase
+            .from('user_lists')
+            .insert({ user_id: user.id, name: listData.name, is_private: listData.is_private })
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Error creating list:", error);
+            addToast(`Error al crear la lista: ${error.message}`, "error");
+            return false;
+        }
+
+        setUserLists(prevLists => [...prevLists, { ...data, items: [] }]);
+        addToast(`Lista '${listData.name}' creada con éxito.`, 'success');
+        return true;
     };
 
-    const removeToast = (id: string | number) => {
-        setToasts(currentToasts => currentToasts.filter(toast => toast.id !== id));
+    const toggleFollowGroup = async (groupId: string, groupName: string) => {
+        if (!user) {
+            addToast("Debes iniciar sesión para seguir a un scan.", "error");
+            return;
+        }
+
+        const isFollowing = followedScanGroups.includes(groupId);
+        if (isFollowing) {
+            const { error } = await supabase
+                .from('user_followed_groups')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('group_id', groupId);
+            if (!error) {
+                setFollowedScanGroups(prev => prev.filter(id => id !== groupId));
+                addToast(`Dejaste de seguir a ${groupName}.`, 'success');
+            } else {
+                console.error("Error unfollowing group:", error);
+                addToast("Error al dejar de seguir al grupo.", 'error');
+            }
+        } else {
+            const { error } = await supabase
+                .from('user_followed_groups')
+                .insert({ user_id: user.id, group_id: groupId });
+            if (!error) {
+                setFollowedScanGroups(prev => [...prev, groupId]);
+                addToast(`Ahora sigues a ${groupName}.`, 'success');
+            } else {
+                console.error("Error following group:", error);
+                addToast("Error al seguir al grupo.", 'error');
+            }
+        }
+    };
+    
+    const toggleListItem = async (listId: number, media: Media) => {
+        if (!user) return;
+        const listToUpdate = userLists.find(l => l.id === listId);
+        if (!listToUpdate) return;
+        
+        const isItemInList = listToUpdate.items.some(item => item.media_id === media.id);
+        
+        if (isItemInList) {
+            const { error } = await supabase
+                .from('user_list_items')
+                .delete()
+                .eq('list_id', listId)
+                .eq('media_id', media.id);
+            if (error) {
+                console.error("Error removing item from list:", error);
+            }
+        } else {
+            const { error } = await supabase
+                .from('user_list_items')
+                .insert({ list_id: listId, media_id: media.id });
+            if (error) {
+                console.error("Error adding item to list:", error);
+            }
+        }
+    };
+    
+    const addMangasToList = async (listId: string, mediaIds: number[]) => {
+        if (!user) {
+            addToast("Debes iniciar sesión para añadir mangas a una lista.", "error");
+            return;
+        }
+
+        const itemsToAdd = mediaIds.map(mediaId => ({ list_id: listId, media_id: mediaId }));
+        
+        const { error } = await supabase
+            .from('user_list_items')
+            .insert(itemsToAdd);
+
+        if (error) {
+            console.error("Error adding mangas to list:", error);
+            addToast("Error al añadir mangas a la lista.", "error");
+        } else {
+            const updatedLists = userLists.map(list => 
+                list.id === parseInt(listId) ? {
+                    ...list,
+                    items: [...list.items, ...itemsToAdd.map(item => ({ media_id: item.media_id }))]
+                } : list
+            );
+            setUserLists(updatedLists as UserList[]);
+            addToast("Mangas añadidos a la lista con éxito.", "success");
+        }
     };
 
-    const value = { user, profile, isLoggedIn: !!user, isVerified, favorites, userLists, followedScanGroups, login, logout, signInWithEmail, signUpWithEmail, updateUserProfile, resendVerificationEmail, toggleFavorite, toggleFollowGroup, createList, addMangasToList, removeMangaFromList, toggleListItem, addToast, logUserActivity };
+    const removeMangaFromList = async (listId: string, mediaId: number) => {
+        if (!user) return;
+
+        const { error } = await supabase
+            .from('user_list_items')
+            .delete()
+            .eq('list_id', listId)
+            .eq('media_id', mediaId);
+
+        if (error) {
+            console.error("Error removing manga from list:", error);
+            addToast("Error al remover manga de la lista.", "error");
+        } else {
+            const updatedLists = userLists.map(list => 
+                list.id === parseInt(listId) ? {
+                    ...list,
+                    items: list.items.filter(item => item.media_id !== mediaId)
+                } : list
+            );
+            setUserLists(updatedLists as UserList[]);
+            addToast("Manga removido de la lista con éxito.", "success");
+        }
+    };
+    
+    const logUserActivity = async (actionType: string, mediaId: number | null, isPrivate: boolean, actionData?: any) => {
+        if (!user) return;
+        const { error } = await supabase.from('user_activity').insert({
+            user_id: user.id,
+            action_type: actionType,
+            media_id: mediaId,
+            is_private: isPrivate,
+            action_data: actionData,
+        });
+        if (error) {
+            console.error("Error logging user activity:", error);
+        }
+    };
+    
+    const resendVerificationEmail = async () => {
+        if (!user || user.email_confirmed_at) return;
+        const { error } = await supabase.auth.resend({
+            type: 'signup',
+            email: user.email!,
+        });
+
+        if (error) {
+            addToast(`Error al reenviar el correo: ${error.message}`, "error");
+            console.error(error);
+        } else {
+            addToast("Correo de verificación reenviado. Revisa tu bandeja de entrada.", "success");
+        }
+    };
+    
+const updatePrimaryScan = async (scanId: string | null) => {
+    if (!user) return;
+    
+    const { error } = await supabase
+        .from('profiles')
+        .update({ scan_group_id: scanId })
+        .eq('id', user.id);
+    
+    if (error) {
+        addToast(`Error al guardar el scan.`, 'error');
+        console.error(error);
+    } else {
+        await fetchUserData(user);
+        addToast(`Scan actualizado con éxito.`, 'success');
+    }
+};
+
+    const value = {
+        user,
+        profile,
+        isLoggedIn,
+        isVerified,
+        favorites,
+        userLists,
+        followedScanGroups,
+        login: signInWithEmail,
+        logout,
+        signInWithEmail,
+        signUpWithEmail,
+        updateUserProfile,
+        resendVerificationEmail,
+        toggleFavorite,
+        createList,
+        toggleFollowGroup,
+        toggleListItem,
+        addToast,
+        logUserActivity,
+        addMangasToList,
+        removeMangaFromList,
+        updatePrimaryScan,
+    };
 
     return (
         <AuthContext.Provider value={value}>

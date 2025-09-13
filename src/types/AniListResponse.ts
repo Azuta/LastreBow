@@ -180,3 +180,26 @@ export interface Plugin {
     isInstalled: boolean;
     icon: string;
 }
+
+export interface ScanGroup {
+    id: string;
+    name: string;
+    description: string;
+    logo_url: string;
+    banner_url: string;
+}
+
+export interface Profile {
+    id: string;
+    username: string;
+    avatar_url: string;
+    role: string;
+    has_completed_onboarding: boolean;
+    bio?: string;
+    banner_url?: string;
+    social_links?: { [key: string]: string };
+    hide_adult_content_on_profile: boolean;
+    primary_scan_id?: string | null;
+    primary_scan_name?: string | null;
+    followed_groups: string[];
+}

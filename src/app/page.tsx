@@ -1,7 +1,7 @@
 // src/app/page.tsx
 "use client";
 import { useEffect, useState, useMemo } from "react";
-import { fetchMediaRows } from "@/services/fetchAniList";
+import { fetchMediaRows, fetchNewChaptersForUser, fetchContinueReadingList , fetchRecommendationsByAuthor, fetchSocialRecommendations } from "@/services/fetchAniList";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/layout/Navbar";
 import MangaSection from "@/components/shared/MangaSection";
@@ -9,13 +9,16 @@ import { Media } from "@/types/AniListResponse";
 import RankingList from '@/components/sidebar/RankingList';
 import ChatBox from '@/components/sidebar/ChatBox';
 import { MangaCardSkeleton } from "@/components/ui/skeletons/MangaCardSkeleton";
-import { mockContinueReading, mockNewChapters } from "@/mock/mediaData";
+import { mockContinueReading } from "@/mock/mediaData";
 
 const Home = () => {
   const [mediaRows, setMediaRows] = useState<{ title: string; data: Media[] }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user, isLoggedIn } = useAuth();
   const [activeTab, setActiveTab] = useState('General');
+  const [newChapters, setNewChapters] = useState<Media[]>([]);
+  const [recommendations, setRecommendations] = useState<Media[]>([]);
+  const [continueReading, setContinueReading] = useState<Media[]>([]); // <-- Nuevo estado
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -32,6 +35,57 @@ const Home = () => {
     };
     loadInitialData();
   }, []);
+
+  useEffect(() => {
+      const loadNewChapters = async () => {
+        if (isLoggedIn && user) {
+            const fetchedChapters = await fetchNewChaptersForUser(user.id);
+            setNewChapters(fetchedChapters);
+        } else {
+            setNewChapters([]);
+        }
+      };
+      loadNewChapters();
+  }, [isLoggedIn, user]);
+
+    // <-- NUEVO useEffect para cargar la lista "Continuar Leyendo"
+  useEffect(() => {
+    const loadContinueReading = async () => {
+      if (isLoggedIn && user) {
+        const list = await fetchContinueReadingList(user.id);
+        setContinueReading(list);
+      } else {
+        setContinueReading([]);
+      }
+    };
+    loadContinueReading();
+  }, [isLoggedIn, user]);
+
+    // <-- NUEVO useEffect para cargar las recomendaciones
+  useEffect(() => {
+      const loadRecommendations = async () => {
+          if (!isLoggedIn || !user) {
+              setRecommendations([]);
+              return;
+          }
+          try {
+              const [byAuthor, bySocial] = await Promise.all([
+                  fetchRecommendationsByAuthor(user.id),
+                  fetchSocialRecommendations(user.id),
+              ]);
+              const combinedRecs = [...byAuthor, ...bySocial];
+              
+              // Eliminar duplicados y mezclar para aleatoriedad
+              const uniqueRecs = Array.from(new Map(combinedRecs.map(item => [item.id, item])).values());
+              setRecommendations(uniqueRecs.sort(() => 0.5 - Math.random()));
+
+          } catch (error) {
+              console.error("Error fetching recommendations:", error);
+              setRecommendations([]);
+          }
+      };
+      loadRecommendations();
+  }, [isLoggedIn, user]);
 
   const forYouMedia = useMemo(() => {
     if (!isLoggedIn || !user?.favorites) return [];
@@ -59,19 +113,30 @@ const Home = () => {
   );
 
   const renderContent = () => {
-    if (activeTab === 'Para Ti') {
+if (activeTab === 'Para Ti') {
       if (!isLoggedIn) {
-        return <p className="text-gray-400 text-center">Inicia sesión para ver tus recomendaciones personalizadas.</p>
+        return <p className="text-gray-400 text-center">Inicia sesión para ver tu contenido personalizado.</p>
       }
       return (
         <>
-            <MangaSection key="continue-reading" title="Continuar Leyendo" media={mockContinueReading} />
-            <MangaSection key="new-chapters" title="Nuevos Capítulos de Favoritos" media={mockNewChapters} />
-            {forYouMedia.length > 0 && <MangaSection key="for-you" title="Recomendado para Ti" media={forYouMedia} />}
+            {/* <-- Usa el estado real en lugar del mock */}
+            {continueReading.length > 0 && <MangaSection key="continue-reading" title="Continuar Leyendo" media={continueReading} />}
+
+            {newChapters.length > 0 ? (
+                 <MangaSection key="new-chapters" title="Nuevos Capítulos" media={newChapters} />
+            ) : (
+                <p className="text-gray-400 text-center">No hay capítulos nuevos de tus mangas favoritos.</p>
+            )}
+
+            {recommendations.length > 0 ? (
+                <MangaSection key="recommendations" title="Recomendado para Ti" media={recommendations} />
+            ) : (
+                <MangaSection key="fallback" title="Recomendaciones Populares" media={mediaRows.find(row => row.title === 'Popular')?.data || []} />
+            )}
         </>
       );
     }
-
+    
     return mediaRows.map((row) => (
       <MangaSection
         key={row.title}

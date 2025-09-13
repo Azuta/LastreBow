@@ -3,10 +3,15 @@
 
 import { useUserPreferences, UserPreferences } from "@/context/UserPreferencesContext";
 import { useAuth } from "@/context/AuthContext";
+import { useState } from "react";
+import ScanSelectionModal from "./ScanSelectionModal";
 
 // --- Iconos ---
 const SaveIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
 const UndoIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"></path><path d="M3 13h6a2 2 0 1 0 0-4H3"></path></svg>;
+const LinkIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
+const PlusIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+const EditIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
 
 // --- Componentes reutilizables ---
 const SettingsSwitch = ({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: () => void; }) => (
@@ -44,7 +49,9 @@ const SettingsOption = ({ label, description, value, options, onChange }: { labe
 
 const SettingsTab = () => {
     const { preferences, setPreference, savePreferences, isDirty, resetPreferences } = useUserPreferences();
-    const { addToast } = useAuth();
+    const { profile, addToast, updatePrimaryScan } = useAuth();
+    const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const handleSave = () => {
         savePreferences();
@@ -54,6 +61,13 @@ const SettingsTab = () => {
     const handleDiscard = () => {
         resetPreferences();
         addToast('Cambios descartados.', 'info');
+    };
+
+    const handleSavePrimaryScan = async (scanId: string | null) => {
+        setIsSaving(true);
+        await updatePrimaryScan(scanId);
+        setIsScanModalOpen(false);
+        setIsSaving(false);
     };
     
     return (
@@ -122,6 +136,38 @@ const SettingsTab = () => {
                 </div>
             </section>
             
+            {/* <-- NUEVA SECCIÓN PARA EL ÚNICO SCAN --> */}
+            <section>
+                <h3 className="text-xl font-bold text-white mb-4">Configuración de Scan</h3>
+                <div className="p-4 rounded-lg bg-gray-700/30 flex items-center justify-between">
+                    <div>
+                        <h4 className="font-semibold text-white">Único Scan</h4>
+                        {profile?.primary_scan_name ? (
+                            <p className="text-sm text-gray-400 mt-1">
+                                Tu scan principal es: <span className="text-indigo-400 font-medium">{profile.primary_scan_name}</span>
+                            </p>
+                        ) : (
+                            <p className="text-sm text-gray-400 mt-1">Elige un scan principal al que pertenezcas.</p>
+                        )}
+                    </div>
+                    {profile?.primary_scan_name ? (
+                        <button
+                            onClick={() => setIsScanModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors"
+                        >
+                            <EditIcon /> Cambiar
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={() => setIsScanModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors"
+                        >
+                            <PlusIcon /> Elegir Scan
+                        </button>
+                    )}
+                </div>
+            </section>
+
             <section>
                 <h3 className="text-xl font-bold text-white mb-4">Privacidad y Notificaciones</h3>
                 <div className="space-y-4">
@@ -145,6 +191,13 @@ const SettingsTab = () => {
                     />
                 </div>
             </section>
+
+            {/* Modal de selección de scan */}
+            <ScanSelectionModal 
+                isOpen={isScanModalOpen} 
+                onClose={() => setIsScanModalOpen(false)} 
+                onSave={handleSavePrimaryScan}
+            />
         </div>
     );
 };

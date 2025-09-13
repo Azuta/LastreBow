@@ -134,7 +134,7 @@ const MediaDetailPage = ({ params }: { params: { id: string } }) => {
     const [chapters, setChapters] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'chapters' | 'overview' | 'comments' | 'manage_chapter'>('chapters');
-    const { isLoggedIn, profile } = useAuth(); // profile se usa implicitamente en canManageChapters
+    const { isLoggedIn, profile, logUserActivity } = useAuth();
     const supabase = createClient();
 
     const loadMediaAndChapters = async () => {
@@ -159,6 +159,13 @@ const MediaDetailPage = ({ params }: { params: { id: string } }) => {
 
         setIsLoading(false);
     };
+
+    // --- NUEVO useEffect para registrar la visita ---
+    useEffect(() => {
+        if (isLoggedIn && media) {
+            logUserActivity('visit_media', media.id, media.isAdult ?? false, { title: media.title.romaji });
+        }
+    }, [isLoggedIn, media, logUserActivity]);
 
     useEffect(() => {
         loadMediaAndChapters();

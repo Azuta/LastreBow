@@ -17,114 +17,93 @@ import ProfileEditModal from '@/components/user/ProfileEditModal';
 import { fetchFavoritesByUserId } from '@/services/fetchAniList';
 import HistoryTab from '@/components/user/HistoryTab';
 import MarketplaceTab from '@/components/user/MarketplaceTab';
+import ScansTab from '@/components/user/ScansTab';
 
-const supabase = createClient();
-
-const EditIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
-const TwitterIcon = () => <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 fill-current"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>;
-const DiscordIcon = () => <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 fill-current"><path d="M20.317 4.369a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4464.8245-.618 1.2525a17.2969 17.2969 0 00-5.4624 0 17.5951 17.5951 0 00-.618-1.2525.0741.0741 0 00-.0785-.0371A19.7157 19.7157 0 003.6796 4.3698a.0741.0741 0 00-.0371.0785c.1755.9378.3428 1.921.4962 2.9158a16.5847 16.5847 0 00-1.5663 2.0468.0741.0741 0 00.0128.1024c.759  .5368 1.5032.9898 2.2132 1.3731a.0741.0741 0 00.0869-.004c.0438-.0299.0741-.07.0869-.1182a13.3313 13.3313 0 00-1.129-2.111.0741.0741 0 00.0128-.1182c.0299-.0128.07-.0128.1024-.0128a15.4383 15.4383 0 002.2618 1.3432.0741.0741 0 00.0869 0c.262-.1182.5112-.2492.7476-.393a12.7199 12.7199 0 00-1.8894-1.2155.0741.0741 0 00-.0615-.131c-.3428-.0299-.6728-.0427-.988-.0427-1.1031 0-2.1444.262-3.1189.7476a.0741.0741 0 00-.0427.0869c.07.388.1654.8117.2748 1.2525a18.2384 18.2384 0 004.7212 1.83.0741.0741 0 00.0869 0 16.529 16.529 0 004.7212-1.83c.1094-.4408.2048-.8645.2748-1.2525a.0741.0741 0 00-.0427-.0869 15.4383 15.4383 0 00-3.1189-.7476c-.3151 0-.6451.0128-.988.0427a.0741.0741 0 00-.0615.131 12.7199 12.7199 0 00-1.8894 1.2155c.2364.1438.4856.2748.7476.393a.0741.0741 0 00.0869 0 15.4383 15.4383 0 002.2618-1.3432.0741.0741 0 00.0128.1182c-.3428.691-.7736 1.3522-1.129 2.111a.0741.0741 0 00.0869.1182c.0128 0 .0427-.0128.0574-.0299a13.3313 13.3313 0 002.2132-1.3731.0741.0741 0 00.0128-.1024 16.5847 16.5847 0 00-1.5663-2.0468c.1534-.9948.3216-1.978.4962-2.9158a.0741.0741 0 00-.0371-.0785z" fill="currentColor"/></svg>;
-const WebsiteIcon = () => <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 fill-current"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-1.01 21.842c-2.31-.225-4.437-1.228-6.113-2.735l.89-1.543c1.455 1.34 3.257 2.19 5.223 2.4V21.84zm1.967-.008v-1.85c2.043-.22 3.9-.1.08 5.31-2.22l.85-1.558c-1.32-1.22-2.148-2.88-2.39-4.75h4.78v-2.02h-4.75c.23-1.82.1.05-3.52 2.34-4.7h-4.8v-2.01h4.75c-.24-1.87-1.07-3.53-2.39-4.75l.85-1.558c1.32 1.22 2.148 2.88 2.39 4.75h4.78v2.01h-4.75c-.23 1.82-1.05 3.52-2.34 4.7h4.8v2.02h-4.78zm.05-19.68v1.843c2.062.217 3.916 1.077 5.337 2.22l.86-1.554c-1.673-1.504-3.8-2.507-6.197-2.734l-.001-.002zm-1.956.01c-2.322.223-4.457 1.22-6.136 2.722l.886 1.55c1.46-1.336 3.266-2.188 5.25-2.4V2.164z"/></svg>;
-const HistoryIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v10l4 4"></path><circle cx="12" cy="12" r="10"></circle></svg>;
-const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.39a2 2 0 0 0 .73 2.73l.15.08a2 2 0 0 1 1 1.73v.18a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.73v-.18a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
-
+const TwitterIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 4s-.7 2.1-2 3.4c-1.6 1.8-3.9 2.1-6 2.1-1.3 0-2.6-.2-3.8-.7a13.34 13.34 0 0 1-5-3c-.1 0-.1 0-.1.1a10 10 0 0 0 2 6c-2.4-1-4.7-3.6-5.4-5.9-.6-2.5-1.1-5.1-.1-7.7A22.84 22.84 0 0 1 2 6.5C3.3 8 5 9 7.2 9a11.1 11.1 0 0 0-4.4 2.8c.8.2 1.6.4 2.4.4-4.8 0-8.8-4-8.8-8.8A9.79 9.79 0 0 1 2.8 2c-1.3 0-2.6-.5-3.8-1.5-.6.2-1.3.4-1.9.4A9.8 9.8 0 0 1 0 10.4a10.29 10.29 0 0 0 16 0A9.95 9.95 0 0 1 22 4z"></path></svg>;
+const DiscordIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15.5 2.5a.5.5 0 0 1 .5.5v19a.5.5 0 0 1-1 0V3a.5.5 0 0 1 .5-.5z"/><path d="M13.5 13.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 .5.5z"/><path d="M12.5 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-8a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5z"/></svg>;
+const WebsiteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2.16 7.42h19.68M2.16 16.58h19.68M8.5 2.16v19.68M15.5 2.16v19.68"/></svg>;
+const EditIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
+const SettingsIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83l-2.6 2.6a2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1.07 1.07c-.16.33-.48.57-.88.57s-.72-.24-.88-.57a1.65 1.65 0 0 0-1.07-1.07 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0l-2.6-2.6a2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.07-1.07c-.16-.33-.48-.57-.88-.57s-.72-.24-.88-.57a1.65 1.65 0 0 0-1.07-1.07c-.16-.33-.48-.57-.88-.57s-.72-.24-.88-.57a1.65 1.65 0 0 0 .33-1.82l.06-.06a2 2 0 0 1 0-2.83l2.6-2.6a2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1.07-1.07c.16-.33.48-.57.88-.57s.72.24.88.57a1.65 1.65 0 0 0-1.82-.33l-.06-.06a2 2 0 0 1 0 2.83l2.6 2.6a2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82z"></path></svg>;
+const HistoryIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"></path><path d="M12 7v5l2 2"></path></svg>;
 
 interface UserProfile {
     id: string;
     username: string;
     avatar_url: string;
-    banner_url?: string;
-    bio?: string;
-    social_links?: { [key: string]: string };
     role: string;
+    bio: string;
+    banner_url: string;
+    social_links: { [key: string]: string };
+    hide_adult_content_on_profile: boolean;
+    primary_scan_id?: string | null;
+    primary_scan_name?: string | null;
+    followed_groups: string[];
     favorites: Media[];
     lists: UserList[];
     profile_comments: any[];
     reviews: any[];
     activity: any[];
-    hide_adult_content_on_profile: boolean;
 }
-
-const mapToMediaProps = (manga: any): Media => ({
-    id: manga.id,
-    title: {
-        romaji: manga.title_romaji,
-        english: manga.title_english,
-        native: manga.title_native,
-    },
-    coverImage: {
-        extraLarge: manga.cover_image_extra_large,
-        large: manga.cover_image_large,
-        medium: '',
-        color: manga.cover_image_color,
-    },
-    bannerImage: manga.banner_image,
-    description: manga.description_en,
-    chapters: manga.chapters,
-    genres: manga.genres,
-    averageScore: manga.average_score,
-    popularity: manga.popularity,
-    status: manga.status,
-    format: manga.format,
-    type: manga.type,
-    episodes: manga.episodes,
-    trailer: manga.trailer,
-    staff: manga.staff,
-    characters: manga.characters,
-    relations: manga.relations,
-    recommendations: manga.recommendations,
-});
 
 const UserProfilePage = ({ params }: { params: { username: string } }) => {
     const { username: initialUsername } = use(params);
-    const { profile: loggedInUserProfile, addToast, favorites, userLists } = useAuth();
+    const { profile: loggedInUserProfile, addToast, favorites, userLists, followedScanGroups } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [userData, setUserData] = useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const supabase = createClient();
 
     const isOwnProfile = loggedInUserProfile?.username === initialUsername;
 
     const fetchUserData = useCallback(async () => {
         setIsLoading(true);
-        const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('username', initialUsername).single();
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select(`
+                *,
+                scan_groups!profiles_scan_group_id_fkey(id, name)
+            `)
+            .eq('username', initialUsername)
+            .single();
+        // -------------------------
         if (profileError || !profile) {
             return notFound();
         }
-        
-        const favoritesData = await fetchFavoritesByUserId(profile.id);
 
+        const favoritesData = await fetchFavoritesByUserId(profile.id);
         const { data: lists } = await supabase.from('user_lists').select('*').eq('user_id', profile.id);
         const { data: comments } = await supabase.from('profile_comments').select('*, author:profiles!author_id(*)').eq('profile_id', profile.id).order('created_at', { ascending: false });
         const { data: reviews } = await supabase.from('reviews').select('*, media:media_id(*)').eq('user_id', profile.id).order('created_at', { ascending: false });
-        
-        const { data: activity } = await supabase
-            .from('user_activity')
-            .select('*')
-            .eq('user_id', profile.id)
-            .order('created_at', { ascending: false });
-        
-        setUserData({
+        const { data: activity } = await supabase.from('user_activity').select('*').eq('user_id', profile.id).order('created_at', { ascending: false });
+
+        const formattedProfile = {
             ...profile,
+            primary_scan_id: profile.primary_scan?.id,
+            primary_scan_name: profile.primary_scan?.name,
+            followed_groups: profile.followed_scans?.map(s => s.group_id) || [],
             favorites: favoritesData,
             lists: lists || [],
             profile_comments: comments || [],
             reviews: reviews || [],
             activity: activity || [],
-        });
+        };
+
+        setUserData(formattedProfile);
         setIsLoading(false);
-    }, [initialUsername]);
+    }, [initialUsername, supabase]);
 
     useEffect(() => {
         fetchUserData();
     }, [fetchUserData]);
 
     useEffect(() => {
-      if (isOwnProfile) {
-        fetchUserData();
-      }
-    }, [favorites, isOwnProfile, fetchUserData]);
+        if (isOwnProfile) {
+          fetchUserData();
+        }
+    }, [favorites, userLists, followedScanGroups, isOwnProfile, fetchUserData]);
 
     useEffect(() => {
         const tab = searchParams.get('tab');
@@ -133,20 +112,27 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
         }
     }, [searchParams]);
 
-    const handleSaveSuccess = async (updatedProfile: UserProfile | null) => {
+    const handleSaveSuccess = async (updatedProfile: any | null) => {
         if (updatedProfile && updatedProfile.username) {
             addToast('Perfil actualizado con éxito', 'success');
             if (updatedProfile.username !== initialUsername) {
                 router.push(`/user/${updatedProfile.username}`);
             } else {
-                setUserData(prevData => ({ ...prevData!, ...updatedProfile }));
+                setUserData(prevData => {
+                    if (prevData) {
+                        return { ...prevData, ...updatedProfile };
+                    }
+                    return null;
+                });
             }
         }
     };
-
+    
     if (isLoading || !userData) {
         return (<><Navbar /><div className="text-center py-20 text-white">Cargando perfil...</div></>);
     }
+
+    const scanTabTitle = userData.primary_scan_id ? 'Mi Scan' : `Scans (${userData.followed_groups.length})`;
 
     return (
         <>
@@ -154,7 +140,7 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
             <ProfileEditModal 
                 isOpen={isEditModalOpen} 
                 onClose={() => setIsEditModalOpen(false)}
-                onSave={handleSaveSuccess as any}
+                onSave={handleSaveSuccess}
             />
             <main>
                 <div className="relative h-48 md:h-64 w-full">
@@ -173,7 +159,7 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
                         </div>
 
                         <div className="ml-0 sm:ml-6 mt-4 sm:mb-4 text-center sm:text-left flex-grow">
-                             <div className="flex items-center justify-center sm:justify-start gap-4">
+                            <div className="flex items-center justify-center sm:justify-start gap-4">
                                 <h1 className="text-3xl md:text-4xl font-bold text-white">{userData.username}</h1>
                                 <div className="flex items-center gap-3 text-gray-400">
                                     {userData.social_links?.twitter && <a href={userData.social_links.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-white"><TwitterIcon /></a>}
@@ -195,17 +181,20 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
 
                     <div className="mt-8">
                         <div className="flex border-b border-gray-700 mb-6 overflow-x-auto">
-                           <button onClick={() => setActiveTab('overview')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'overview' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Resumen</button>
-                           <button onClick={() => setActiveTab('favorites')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'favorites' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Favoritos ({favorites.length})</button>
-                           <button onClick={() => setActiveTab('lists')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'lists' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Listas ({userLists.length})</button>
-                           <button onClick={() => setActiveTab('reviews')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'reviews' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Reseñas ({userData.reviews.length})</button>
-                           <button onClick={() => setActiveTab('history')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === 'history' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>
+                            <button onClick={() => setActiveTab('overview')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'overview' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Resumen</button>
+                            <button onClick={() => setActiveTab('favorites')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'favorites' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Favoritos ({favorites.length})</button>
+                            <button onClick={() => setActiveTab('lists')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'lists' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Listas ({userLists.length})</button>
+                            <button onClick={() => setActiveTab('reviews')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'reviews' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Reseñas ({userData.reviews.length})</button>
+                            <button onClick={() => setActiveTab('history')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === 'history' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>
                                 <HistoryIcon /> Historial ({userData.activity.length})
-                           </button>
-                           {isOwnProfile && (
+                            </button>
+                            <button onClick={() => setActiveTab('scans')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'scans' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>
+                                {scanTabTitle}
+                            </button>
+                            {isOwnProfile && (
                                 <button onClick={() => setActiveTab('marketplace')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'marketplace' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Marketplace</button>
-                           )}
-                           {isOwnProfile && (
+                            )}
+                            {isOwnProfile && (
                                 <button onClick={() => setActiveTab('settings')} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === 'settings' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>
                                     <SettingsIcon /> Configuración
                                 </button>
@@ -233,12 +222,30 @@ const UserProfilePage = ({ params }: { params: { username: string } }) => {
                                     onReviewAdded={fetchUserData}
                                 />
                             )}
+                                                        {/* Renderiza el nuevo componente ScansTab */}
+                            {activeTab === 'scans' && <ScansTab />}
+
                             {activeTab === 'history' && (
                                 <HistoryTab 
                                     activity={userData.activity} 
                                     isOwnProfile={isOwnProfile}
                                     hideAdultContentOnProfile={userData.hide_adult_content_on_profile}
                                 />
+                            )}
+                            {activeTab === 'scans' && (
+                                <div className="text-center py-20">
+                                  {userData.primary_scan_id ? (
+                                    <div className="flex flex-col items-center">
+                                      <p className="text-xl font-semibold text-white">Mi Scan Único: <span className="text-indigo-400 font-medium">{userData.primary_scan_name}</span></p>
+                                      <p className="text-gray-400 mt-2">Próximamente más detalles sobre los scans del usuario.</p>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col items-center">
+                                      <p className="text-xl font-semibold text-white">Scans Seguidos</p>
+                                      <p className="text-gray-400 mt-2">Próximamente podrás ver los scans que sigues aquí.</p>
+                                    </div>
+                                  )}
+                                </div>
                             )}
                             {activeTab === 'settings' && isOwnProfile && <SettingsTab />}
                             {activeTab === 'marketplace' && isOwnProfile && <MarketplaceTab />}

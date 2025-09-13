@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
+import { useAuth } from '@/context/AuthContext';
+import { updateReadingProgress } from '@/services/fetchAniList'; // <-- Importa la nueva función
 
 // --- Iconos (Sin cambios) ---
 const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
@@ -26,6 +28,7 @@ const ReaderPage = ({ params }: { params: { mediaId: string; chapterId: string }
     const readerRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
     const supabase = createClient();
+    const { user } = useAuth(); // <-- Obtén el usuario del contexto
 
     useEffect(() => {
         const fetchChapterPages = async () => {
@@ -54,7 +57,8 @@ const ReaderPage = ({ params }: { params: { mediaId: string; chapterId: string }
             setChapterInfo({
                 number: data.chapter_number,
                 title: data.title || undefined,
-                mediaTitle: data.media.title_english || data.media.title_romaji
+                mediaTitle: data.media.title_english || data.media.title_romaji,
+                mediaId: data.media.id // <-- Guarda el ID del manga
             });
             setIsLoading(false);
         };
@@ -62,6 +66,13 @@ const ReaderPage = ({ params }: { params: { mediaId: string; chapterId: string }
         fetchChapterPages();
     }, [params.chapterId, params.mediaId]);
     
+        // <-- NUEVO useEffect para actualizar el progreso
+    useEffect(() => {
+        if (user && chapterInfo) {
+            updateReadingProgress(user.id, chapterInfo.mediaId, chapterInfo.number);
+        }
+    }, [user, chapterInfo]);
+
     // ... (El resto de los hooks y funciones como goToNextPage, toggleFullscreen, etc., no necesitan cambios)
 
     if (isLoading || !chapterInfo) {
