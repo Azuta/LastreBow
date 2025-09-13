@@ -60,11 +60,6 @@ export interface Relation {
   media: Media;
 }
 
-export interface Recommendation {
-    id: number;
-    media: Media;
-}
-
 export interface ChapterUpload {
   id: string;
   scanGroup: string;
@@ -114,6 +109,7 @@ export interface Media {
   collaboratorsCount?: number;
   scanGroupId?: string;
   isPrivate?: boolean;
+  lastChapterRead?: string;
 }
 
 export interface PageInfo {
@@ -150,19 +146,22 @@ export interface Task {
   chapterNumber: string;
   title: string;
   coverImage: string;
-  status: TaskStatus;
+  status: string; // Cambiado a string para ser dinámico
   assignedTo?: { username: string; avatarUrl: string }[];
+  color?: string; // Nuevo campo para el color de la tarea
 }
 
 export interface Project extends Media {
     tasks: Task[];
 }
 
+// --- Nuevo tipo para las listas de usuario ---
 export interface UserList {
-    id: string;
+    id: number;
     name: string;
     description: string;
-    is_public: boolean; // <-- AÑADE ESTA LÍNEA
+    is_public: boolean;
+    items: { media_id: number; order: number; }[];
     itemCount: number;
     coverImages: string[];
     user: {
@@ -187,6 +186,8 @@ export interface ScanGroup {
     description: string;
     logo_url: string;
     banner_url: string;
+    owner_id: string; // Añadido para la lógica de permisos
+    members: { id: string; username: string; avatar_url: string; role: string }[];
 }
 
 export interface Profile {
@@ -199,7 +200,64 @@ export interface Profile {
     banner_url?: string;
     social_links?: { [key: string]: string };
     hide_adult_content_on_profile: boolean;
-    primary_scan_id?: string | null;
-    primary_scan_name?: string | null;
+    memberOfGroups: ScanGroup[];
     followed_groups: string[];
+}
+// --- Nuevos tipos para propuestas de proyectos ---
+export type ProposalStatus = 'pending' | 'approved' | 'rejected';
+export interface ProjectProposal {
+  id: number;
+  group_id: string;
+  proposer_id: string;
+  media: Media;
+  note: string;
+  created_at: string;
+  status: ProposalStatus;
+}
+
+
+// --- Nuevos tipos para notificaciones ---
+export type NotificationType = 'new_proposal' | 'system_update' | 'new_announcement' | 'custom';
+export interface Notification {
+  id: number;
+  user_id: string;
+  type: NotificationType;
+  content: any;
+  is_read: boolean;
+  created_at: string;
+}
+
+// --- Nuevos tipos para anuncios y historial del scan ---
+export interface Announcement {
+  id: number;
+  group_id: string;
+  user_id: string;
+  title?: string;
+  content: string;
+  created_at: string;
+  user: {
+    username: string;
+    avatar_url: string;
+  }
+}
+
+export interface ScanHistoryItem {
+  id: number;
+  group_id: string;
+  user: {
+    username: string;
+    avatar_url: string;
+  };
+  action_type: string;
+  action_data: any;
+  created_at: string;
+}
+
+// --- Nuevo tipo para vincular grupos a mangas (proyectos) ---
+export interface ScanProject {
+    id: number;
+    group_id: string;
+    media_id: number;
+    status: string;
+    media: Media; // Usado para la relación en Supabase
 }

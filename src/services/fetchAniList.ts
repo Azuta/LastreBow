@@ -1,10 +1,13 @@
 // src/services/fetchAniList.ts
-import { Media } from "@/types/AniListResponse";
+import { Media, Announcement, ScanHistoryItem, ProjectProposal, ScanProject } from "@/types/AniListResponse";
 import { createClient } from "@/lib/supabaseClient";
 
 const supabase = createClient();
 
 const transformMedia = (dbMedia: any): Media => {
+  if (!dbMedia || !dbMedia.title_romaji) {
+      return dbMedia;
+  }
   const transformEdges = (edgeObject: any) => {
     if (edgeObject && Array.isArray(edgeObject.edges)) {
       return edgeObject.edges.map((edge: any) => ({
@@ -111,7 +114,6 @@ export const fetchFavoritesByUserId = async (userId: string): Promise<Media[]> =
     return mappedAndTransformed;
 };
 
-// <--- NUEVA FUNCIÓN AÑADIDA ---
 export const fetchNewChaptersForUser = async (userId: string): Promise<Media[]> => {
     const { data, error } = await supabase.rpc('get_new_chapters_for_favorites', { user_id: userId });
     
@@ -123,7 +125,6 @@ export const fetchNewChaptersForUser = async (userId: string): Promise<Media[]> 
     return data.map(transformMedia);
 };
 
-// <--- NUEVAS FUNCIONES DE RECOMENDACIÓN ---
 export const fetchRecommendationsByAuthor = async (userId: string): Promise<Media[]> => {
     const { data, error } = await supabase.rpc('get_recommendations_by_author', { user_id: userId });
     if (error) {
@@ -132,7 +133,6 @@ export const fetchRecommendationsByAuthor = async (userId: string): Promise<Medi
     }
     // Suponiendo que la función RPC devuelve IDs de media,
     // puedes mapearlos para obtener los datos completos.
-    // Aquí usamos un mock por simplicidad.
     const mockRecommendations = [{
         "id": 87216, "title": { "english": "Demon Slayer", "romaji": "Kimetsu no Yaiba", "native": "Kimetsu no Yaiba" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx87216-c9bSNVD10UuD.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx87216-c9bSNVD10UuD.png", "medium": "", "color": null }, "genres": ["Action", "Supernatural"], "averageScore": 79, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" 
     },
@@ -153,7 +153,6 @@ export const fetchSocialRecommendations = async (userId: string): Promise<Media[
     return mockRecommendations;
 };
 
-// <-- NUEVAS FUNCIONES PARA EL PROGRESO
 export const updateReadingProgress = async (userId: string, mediaId: number, chapterNumber: string) => {
     const { error } = await supabase.rpc('update_reading_progress', {
         user_id: userId,
@@ -192,9 +191,99 @@ export const fetchContinueReadingList = async (userId: string): Promise<Media[]>
         return [];
     }
     
-    // Mapear los datos para que coincidan con la estructura de Media
     return data.map(item => ({
         ...transformMedia(item.media),
         lastChapterRead: item.last_chapter_read,
     }));
+};
+
+// --- Nuevas funciones para la gestión de grupos ---
+export const addProjectToGroup = async (groupId: string, mediaId: number) => {
+    const { data, error } = await supabase
+        .from('scan_projects')
+        .insert({ group_id: groupId, media_id: mediaId })
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+};
+
+export const createProjectProposal = async (groupId: string, proposerId: string, media: Media, note: string) => {
+    const { data, error } = await supabase
+        .from('project_proposals')
+        .insert({
+            group_id: groupId,
+            proposer_id: proposerId,
+            media_id: media.id,
+            title: media.title.romaji || media.title.english || 'Título Desconocido',
+            description: note,
+        })
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+};
+
+export const createAnnouncement = async (groupId: string, userId: string, content: string, notify: boolean) => {
+    const { data, error } = await supabase
+        .from('announcements')
+        .insert({ group_id: groupId, user_id: userId, content, is_notification_sent: notify })
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+};
+
+export const fetchGroupAnnouncements = async (groupId: string): Promise<Announcement[]> => {
+    const { data, error } = await supabase
+        .from('announcements')
+        .select('*, user:profiles(username, avatar_url)')
+        .eq('group_id', groupId)
+        .order('created_at', { ascending: false });
+    if (error) {
+        console.error('Error fetching announcements:', error);
+        return [];
+    }
+    return data as Announcement[];
+};
+
+export const fetchScanHistory = async (groupId: string): Promise<ScanHistoryItem[]> => {
+    const { data, error } = await supabase
+        .from('scan_history')
+        .select('*, user:profiles(username, avatar_url)')
+        .eq('group_id', groupId)
+        .order('created_at', { ascending: false });
+    if (error) {
+        console.error('Error fetching scan history:', error);
+        return [];
+    }
+    return data as ScanHistoryItem[];
+};
+
+export const fetchGroupProjects = async (groupId: string): Promise<Media[]> => {
+    const { data, error } = await supabase
+        .from('scan_projects')
+        .select(`media_id, media:media_id(*)`)
+        .eq('group_id', groupId)
+        .order('created_at', { ascending: false });
+    
+    if (error) {
+        console.error('Error fetching group projects:', error);
+        return [];
+    }
+    
+    const mediaWithCounts = data.map(async (project) => {
+        const { count } = await supabase
+            .from('chapters')
+            .select('id', { count: 'exact', head: true })
+            .eq('media_id', project.media_id);
+            
+        return {
+            ...transformMedia(project.media),
+            chapters: count || 0,
+            collaboratorsCount: 0, // Esto requerirá una consulta adicional si es necesario
+        };
+    });
+    
+    return Promise.all(mediaWithCounts);
 };

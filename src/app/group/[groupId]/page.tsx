@@ -7,11 +7,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import ProjectCard from "@/components/ui/cards/ProjectCard";
-import { dailyRankingMock } from "@/mock/mediaData";
-import { Media, ScanGroup } from "@/types/AniListResponse";
+import { Media, ScanGroup, Announcement, ScanHistoryItem } from "@/types/AniListResponse";
 import { useAuth } from "@/context/AuthContext";
 import CommentsSection from "@/components/media/CommentsSection";
 import { createClient } from '@/lib/supabaseClient';
+import { fetchGroupAnnouncements, fetchScanHistory, createProjectProposal, createAnnouncement, addProjectToGroup, fetchGroupProjects } from '@/services/fetchAniList';
 
 const supabase = createClient();
 
@@ -19,8 +19,11 @@ const supabase = createClient();
 import ProjectKanban from '@/components/management/ProjectKanban';
 import RecruitmentTab from '@/components/group/RecruitmentTab';
 import AnalyticsTab from '@/components/group/AnalyticsTab';
+import ProposeProjectModal from '@/components/group/ProposeProjectModal';
+import ScanHistoryTab from '@/components/group/ScanHistoryTab';
 
 // --- Iconos ---
+const PlusIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
 const UserIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
@@ -35,80 +38,84 @@ const ClipboardIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill
 const BriefcaseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>;
 const BarChartIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>;
 const DollarSignIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
-
-// Datos de prueba para simular datos que no están en la tabla `scan_groups`
-const MOCK_GROUP_DATA: { [key: string]: { projects: Media[]; members: any[]; socials: any; announcements: any[]; } } = {
-  group001: {
-    projects: dailyRankingMock
-      .slice(0, 5)
-      .map((p) => ({
-        ...p,
-        chapters: Math.floor(Math.random() * 200),
-        collaboratorsCount: Math.floor(Math.random() * 10) + 2,
-      })),
-    members: [
-      { id: "user004", username: "Kaiser", avatarUrl: "https://i.pravatar.cc/150?u=user004", role: "Líder" },
-      { id: "user005", username: "Zephyr", avatarUrl: "https://i.pravatar.cc/150?u=user005", role: "Miembro" },
-    ],
-    socials: {
-      twitter: "https://twitter.com/NoSleep",
-      discord: "https://discord.gg/nosleep",
-      patreon: "https://www.patreon.com/nosleep",
-    },
-    announcements: [
-      { id: 1, title: "¡Buscamos Editores!", content: "Estamos buscando editores con experiencia en Photoshop para unirse a nuestro equipo.", date: "hace 2 días" },
-    ],
-  },
-  group002: {
-    projects: dailyRankingMock
-      .slice(5, 8)
-      .map((p) => ({
-        ...p,
-        chapters: Math.floor(Math.random() * 100),
-        collaboratorsCount: Math.floor(Math.random() * 5) + 2,
-      })),
-    members: [
-      { id: "user006", username: "Alpha", avatarUrl: "https://i.pravatar.cc/150?u=user006", role: "Líder" },
-    ],
-    socials: { discord: "https://discord.gg/shadow" },
-    announcements: [],
-  },
-};
+const HistoryIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"></path><path d="M12 7v5l2 2"></path></svg>;
 
 const GroupPage = ({ params }: { params: { groupId: string } }) => {
     const { groupId } = use(params);
     const [groupData, setGroupData] = useState<ScanGroup | null>(null);
+    const [projects, setProjects] = useState<Media[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("projects");
-    const { profile, followedScanGroups, toggleFollowGroup, isLoggedIn } = useAuth();
+    const { profile, followedScanGroups, toggleFollowGroup, isLoggedIn, addToast } = useAuth();
+    const [isProposeModalOpen, setIsProposeModalOpen] = useState(false);
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [history, setHistory] = useState<ScanHistoryItem[]>([]);
 
-    useEffect(() => {
-      const loadGroupData = async () => {
+    const fetchGroupData = async () => {
         setIsLoading(true);
-        const { data, error } = await supabase
+
+        const { data: group, error } = await supabase
             .from('scan_groups')
-            .select(`*, members:profiles!profiles_scan_group_id_fkey(id, username, avatar_url, role)`)
+            .select(`
+                *,
+                members:user_groups!inner(
+                    role,
+                    profile:profiles(id, username, avatar_url)
+                )
+            `)
             .eq('id', groupId)
             .single();
 
-        if (error || !data) {
+        if (error || !group) {
             console.error("Error fetching group:", error);
-            const mockData = MOCK_GROUP_DATA[groupId];
-            if (mockData) {
-                setGroupData({ ...mockData, id: groupId, name: `Mock Group ${groupId}`, logo_url: mockData.members[0]?.avatarUrl || '', banner_url: dailyRankingMock[0]?.bannerImage });
-            } else {
-                notFound();
-            }
-        } else {
-            setGroupData(data);
+            return notFound();
         }
+        setGroupData(group);
+
+        setProjects(await fetchGroupProjects(groupId));
+        setAnnouncements(await fetchGroupAnnouncements(groupId));
+        setHistory(await fetchScanHistory(groupId));
+
         setIsLoading(false);
-      };
-      loadGroupData();
+    };
+
+    useEffect(() => {
+        fetchGroupData();
     }, [groupId]);
 
     const isFollowing = followedScanGroups.includes(groupId);
-    const isMember = profile?.scan_group_id === groupId;
+    const isMember = profile?.memberOfGroups.some(group => group.id === groupId) || false;
+    const isAdmin = profile?.memberOfGroups.some(group => group.id === groupId && group.role === 'admin') || false;
+
+    const handleProposeProject = async ({ media, note, notify }: { media: Media, note: string, notify: boolean }) => {
+        if (!profile || !groupData) return;
+
+        try {
+            if (isAdmin) {
+                await addProjectToGroup(groupId, media.id);
+                const announcementContent = `El administrador ${profile.username} ha añadido un nuevo proyecto: "${media.title.romaji}".`;
+                await createAnnouncement(groupId, profile.id, announcementContent, notify);
+                await supabase.from('scan_history').insert({ group_id: groupId, user_id: profile.id, action_type: 'create_project', action_data: { title: media.title.romaji } });
+                addToast('Proyecto creado con éxito.', 'success');
+            } else {
+                await createProjectProposal(groupId, profile.id, media, note);
+                if (notify) {
+                    const announcementContent = `Se ha sugerido un nuevo proyecto: "${media.title.romaji}". Nota: ${note}`;
+                    await createAnnouncement(groupId, profile.id, announcementContent, notify);
+                    addToast('Propuesta enviada y notificada a los miembros.', 'success');
+                } else {
+                    addToast('Propuesta enviada. El administrador la revisará pronto.', 'success');
+                }
+                await supabase.from('scan_history').insert({ group_id: groupId, user_id: profile.id, action_type: 'propose_project', action_data: { title: media.title.romaji, note } });
+            }
+        } catch (error) {
+            addToast('Hubo un error al procesar la solicitud.', 'error');
+            console.error(error);
+        }
+
+        setIsProposeModalOpen(false);
+        fetchGroupData(); // Actualizar los datos
+    };
 
     if (isLoading || !groupData) {
         return (
@@ -119,16 +126,13 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
         );
     }
     
-    const extraData = MOCK_GROUP_DATA[groupData.id] || { projects: dailyRankingMock.slice(0, 5), members: [], socials: {}, announcements: [] };
-
-
     return (
         <>
             <Navbar />
             <main>
                 <div className="relative h-48 md:h-64 w-full">
                     {groupData.banner_url && (
-                         <Image src={groupData.banner_url} alt={`${groupData.name} Banner`} fill style={{ objectFit: "cover" }} sizes="100vw" />
+                        <Image src={groupData.banner_url} alt={`${groupData.name} Banner`} fill style={{ objectFit: "cover" }} sizes="100vw" />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a24] to-transparent"></div>
                 </div>
@@ -144,8 +148,8 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
                             <p className="text-gray-400 mt-2 max-w-lg">{groupData.description}</p>
                             <div className="flex flex-wrap gap-4 mt-4 justify-center sm:justify-start">
                                 <div className="flex items-center gap-1 text-sm text-gray-400"><UserIcon /> {groupData.members?.length || 0} Miembros</div>
-                                <div className="flex items-center gap-1 text-sm text-gray-400"><BookOpenIcon /> {extraData.projects.length} Proyectos</div>
-                                {isLoggedIn && (
+                                <div className="flex items-center gap-1 text-sm text-gray-400"><BookOpenIcon /> {projects.length} Proyectos</div>
+                                {isLoggedIn && !isMember && (
                                     <button
                                         onClick={() => toggleFollowGroup(groupId, groupData.name)}
                                         className={`px-4 py-1 rounded-full text-sm font-semibold transition-colors ${
@@ -155,8 +159,8 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
                                         {isFollowing ? "Siguiendo" : "Seguir"}
                                     </button>
                                 )}
-                                {extraData.socials.patreon && (
-                                    <a href={extraData.socials.patreon} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold bg-[#FF424D] text-white hover:opacity-90 transition-opacity">
+                                {groupData.social_links?.patreon && (
+                                    <a href={groupData.social_links.patreon} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold bg-[#FF424D] text-white hover:opacity-90 transition-opacity">
                                         <DollarSignIcon /> Apoyar en Patreon
                                     </a>
                                 )}
@@ -176,28 +180,55 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
                             {isMember && (
                                 <button onClick={() => setActiveTab("analytics")} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === "analytics" ? "text-white border-[#ffbade]" : "text-gray-400 border-transparent hover:text-white"}`}><BarChartIcon /> Analíticas</button>
                             )}
+                            {isMember && (
+                                <button onClick={() => setActiveTab("history")} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === "history" ? "text-white border-[#ffbade]" : "text-gray-400 border-transparent hover:text-white"}`}><HistoryIcon /> Historial</button>
+                            )}
                         </div>
 
                         <div>
                             {activeTab === "projects" && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {extraData.projects.map((project) => (
-                                        <ProjectCard key={project.id} project={project} />
-                                    ))}
+                                    <div className="md:col-span-2 flex justify-end mb-4">
+                                        {isMember && (
+                                            <button
+                                                onClick={() => setIsProposeModalOpen(true)}
+                                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors"
+                                            >
+                                                <PlusIcon /> {isAdmin ? 'Crear Proyecto' : 'Sugerir Proyecto'}
+                                            </button>
+                                        )}
+                                    </div>
+                                    {projects.length > 0 ? (
+                                        projects.map((project) => (
+                                            <ProjectCard key={project.id} project={project} />
+                                        ))
+                                    ) : (
+                                        <div className="md:col-span-2 text-center py-8 text-gray-400">
+                                            Este grupo aún no tiene proyectos publicados.
+                                        </div>
+                                    )}
                                 </div>
                             )}
-                            {activeTab === "management" && isMember && <ProjectKanban />}
+                            {activeTab === "management" && isMember && <ProjectKanban isAdmin={isAdmin} members={groupData?.members} />}
                             {activeTab === "announcements" && (
                                 <div className="max-w-screen-md mx-auto space-y-4 py-8">
-                                    {extraData.announcements.map((ann) => (
-                                        <div key={ann.id} className="bg-[#201f31] rounded-lg p-4">
-                                            <h4 className="font-bold text-white">{ann.title}</h4>
-                                            <p className="text-xs text-gray-500 mb-2">{ann.date}</p>
-                                            <p className="text-sm text-gray-300">{ann.content}</p>
-                                        </div>
-                                    ))}
+                                    {announcements.length > 0 ? (
+                                        announcements.map((ann) => (
+                                            <div key={ann.id} className="bg-[#201f31] rounded-lg p-4">
+                                                <h4 className="font-bold text-white">{ann.title || 'Anuncio'}</h4>
+                                                <p className="text-xs text-gray-500 mb-2">{new Date(ann.created_at).toLocaleDateString()}</p>
+                                                <p className="text-sm text-gray-300">{ann.content}</p>
+                                                <div className="mt-2 text-xs text-gray-500">
+                                                    Por: <span className="text-gray-300">{ann.user.username}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-8 text-gray-400">No hay anuncios en este momento.</div>
+                                    )}
                                 </div>
                             )}
+                            {activeTab === "history" && isMember && <ScanHistoryTab history={history} />}
                             {activeTab === "recruitment" && <RecruitmentTab />}
                             {activeTab === "community" && (
                                 <div className="max-w-screen-md mx-auto py-8">
@@ -207,14 +238,14 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
                             {activeTab === "members" && (
                                 <div className="max-w-screen-md mx-auto space-y-4 py-8">
                                     {groupData.members?.map((member) => (
-                                        <div key={member.id} className="bg-[#201f31] rounded-lg p-4 flex items-center gap-4">
+                                        <div key={member.profile.id} className="bg-[#201f31] rounded-lg p-4 flex items-center gap-4">
                                             <div className="relative w-12 h-12 rounded-full overflow-hidden">
-                                                {member.avatar_url && (
-                                                    <Image src={member.avatar_url} alt={member.username} fill style={{ objectFit: "cover" }} />
+                                                {member.profile.avatar_url && (
+                                                    <Image src={member.profile.avatar_url} alt={member.profile.username} fill style={{ objectFit: "cover" }} />
                                                 )}
                                             </div>
                                             <div>
-                                                <h3 className="font-bold text-white">{member.username}</h3>
+                                                <h3 className="font-bold text-white">{member.profile.username}</h3>
                                                 <p className="text-sm text-[#ffbade]">{member.role}</p>
                                             </div>
                                         </div>
@@ -226,6 +257,12 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
                     </div>
                 </div>
             </main>
+            <ProposeProjectModal
+                isOpen={isProposeModalOpen}
+                onClose={() => setIsProposeModalOpen(false)}
+                onSubmit={handleProposeProject}
+                isMember={isMember}
+            />
         </>
     );
 };

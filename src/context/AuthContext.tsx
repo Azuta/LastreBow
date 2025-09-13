@@ -11,6 +11,12 @@ import { fetchFavoritesByUserId } from '@/services/fetchAniList';
 type ToastType = 'success' | 'error' | 'info' | 'favorite-add' | 'favorite-remove';
 type Toast = Omit<ToastProps, 'onDismiss'>;
 
+interface ScanGroup {
+    id: string;
+    name: string;
+    role: string;
+}
+
 interface Profile {
     id: string;
     username: string;
@@ -21,14 +27,8 @@ interface Profile {
     banner_url?: string;
     social_links?: { [key: string]: string };
     hide_adult_content_on_profile: boolean;
-    scan_group_id?: string | null;
-    scan_groups?: ScanGroup | null;
+    memberOfGroups: ScanGroup[];
     followed_groups: string[];
-}
-
-interface ScanGroup {
-    id: string;
-    name: string;
 }
 
 interface ProfileUpdate {
@@ -85,20 +85,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [followedScanGroups, setFollowedScanGroups] = useState<string[]>([]);
     const [toasts, setToasts] = useState<Toast[]>([]);
     const router = useRouter();
-    
+
     const addToast = (message: string, type: ToastType = 'info') => {
         const newToast = { id: Date.now(), message, type };
         setToasts(prev => [...prev, newToast]);
     };
-    
+
     const removeToast = (id: number) => {
         setToasts(prev => prev.filter(t => t.id !== id));
     };
 
     const fetchUserData = async (user: User): Promise<Profile | null> => {
-        const { data, error } = await supabase
+        const { data: profileData, error } = await supabase
             .from('profiles')
-            .select(`*, scan_groups!profiles_scan_group_id_fkey(id, name)`)
+            // Corregido: Usar LEFT JOIN (`!left`) para incluir perfiles sin grupos.
+            .select(`*, user_groups!left(role, scan_groups(id, name))`)
             .eq('id', user.id)
             .single();
 
@@ -107,21 +108,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return null;
         }
 
-        const profileData = {
-            ...data,
+        const memberOfGroups = profileData.user_groups.map(ug => ({
+            id: ug.scan_groups.id,
+            name: ug.scan_groups.name,
+            role: ug.role,
+        }));
+        
+        const finalProfile = {
+            ...profileData,
+            memberOfGroups,
         } as Profile;
         
-        setProfile(profileData);
-        const favoritesData = await fetchFavoritesByUserId(profileData.id);
+        setProfile(finalProfile);
+        const favoritesData = await fetchFavoritesByUserId(finalProfile.id);
         setFavorites(favoritesData || []);
         
-        const { data: listsData } = await supabase.from('user_lists').select(`*, user:profiles!user_id(username)`).eq('user_id', profileData.id);
+        const { data: listsData } = await supabase.from('user_lists').select(`*, user:profiles!user_id(username)`).eq('user_id', finalProfile.id);
         setUserLists(listsData as UserList[] || []);
         
-        const { data: followedGroupsData } = await supabase.from('user_followed_groups').select('group_id').eq('user_id', profileData.id);
+        const { data: followedGroupsData } = await supabase.from('user_followed_groups').select('group_id').eq('user_id', finalProfile.id);
         setFollowedScanGroups(followedGroupsData?.map(group => group.group_id) || []);
-        return profileData;
-
+        return finalProfile;
     };
 
     const handleAuthChange = async () => {
@@ -203,7 +210,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setProfile(prev => prev ? { ...prev, ...data } : null);
         return data as Profile;
     };
-    
+
     const toggleFavorite = async (media: Media) => {
         if (!user) {
             addToast("Necesitas iniciar sesión para añadir a favoritos.", "error");
@@ -233,7 +240,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         }
     };
-    
+
     const createList = async (listData: NewListData) => {
         if (!user) {
             addToast("Debes iniciar sesión para crear una lista.", "error");
@@ -289,7 +296,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         }
     };
-    
+
     const toggleListItem = async (listId: number, media: Media) => {
         if (!user) return;
         const listToUpdate = userLists.find(l => l.id === listId);
@@ -395,19 +402,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             addToast("Correo de verificación reenviado. Revisa tu bandeja de entrada.", "success");
         }
     };
-    
+
     const updatePrimaryScan = async (scanId: string | null) => {
         if (!user) return;
-        
         const { error } = await supabase
-            .from('profiles')
-            .update({ scan_group_id: scanId })
-            .eq('id', user.id);
-        
+            .from('user_groups')
+            .update({ role: 'member' })
+            .eq('user_id', user.id)
+            .neq('group_id', scanId);
+
         if (error) {
             addToast(`Error al guardar el scan.`, 'error');
             console.error(error);
         } else {
+            await supabase.from('user_groups').update({ role: 'primary' }).eq('user_id', user.id).eq('group_id', scanId);
             await fetchUserData(user);
             addToast(`Scan actualizado con éxito.`, 'success');
         }
@@ -416,18 +424,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const createGroup = async (name: string, description: string): Promise<string | null> => {
         if (!user) return null;
         
-        const { data, error } = await supabase
+        const { data: group, error: groupError } = await supabase
             .from('scan_groups')
             .insert({ name, description, owner_id: user.id })
             .select('id')
             .single();
 
-        if (error) {
-            console.error("Error creating group:", error);
+        if (groupError) {
+            console.error("Error creating group:", groupError);
+            addToast("Error al crear el grupo, puede que el nombre ya exista.", 'error');
+            return null;
+        }
+        
+        // Asignar al creador como miembro y admin
+        const { error: memberError } = await supabase
+            .from('user_groups')
+            .insert({ user_id: user.id, group_id: group.id, role: 'admin' });
+
+        if (memberError) {
+            console.error("Error adding group creator as member:", memberError);
+            addToast("El grupo fue creado, pero hubo un error al asignarte como miembro.", 'error');
             return null;
         }
 
-        return data.id;
+        addToast(`Grupo "${name}" creado con éxito.`, 'success');
+        await fetchUserData(user);
+        return group.id;
     };
     
     const updateGroupImagesAndSocials = async (groupId: string, updates: { logo_url?: string | null, banner_url?: string | null, social_links?: any }) => {
@@ -452,7 +474,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         favorites,
         userLists,
         followedScanGroups,
-        login: signInWithEmail,
+        login: () => supabase.auth.signInWithOAuth({ provider: 'discord' }),
         logout,
         signInWithEmail,
         signUpWithEmail,
