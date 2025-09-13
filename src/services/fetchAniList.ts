@@ -287,3 +287,36 @@ export const fetchGroupProjects = async (groupId: string): Promise<Media[]> => {
     
     return Promise.all(mediaWithCounts);
 };
+
+export const fetchKanbanTasks = async (groupId: string): Promise<any[]> => {
+    if (!groupId) {
+        return []; // Retornar un array vacío si no hay groupId
+    }
+
+    const { data, error } = await supabase
+        .from('kanban_tasks')
+        .select(`
+            id,
+            title,
+            status,
+            color,
+            assigned_to:assigned_users (
+                user:profiles (id, username, avatar_url)
+            )
+        `)
+        .eq('group_id', groupId);
+
+    if (error) {
+        console.error('Error fetching kanban tasks:', error);
+        return [];
+    }
+
+    return data.map(task => ({
+        ...task,
+        assignedTo: task.assigned_to.map(assignee => ({
+            id: assignee.user.id,
+            username: assignee.user.username,
+            avatarUrl: assignee.user.avatar_url,
+        }))
+    }));
+};

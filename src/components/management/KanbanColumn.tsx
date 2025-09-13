@@ -17,9 +17,10 @@ interface KanbanColumnProps {
   onRenameColumn: (columnId: string, newTitle: string) => void;
   onDeleteColumn: (columnId: string) => void;
   onEditTask: (task: Task) => void;
+  activeId: string | null;
 }
 
-export const KanbanColumn = ({ id, title, tasks, isAdmin, isEditMode, onRenameColumn, onDeleteColumn, onEditTask }: KanbanColumnProps) => {
+export const KanbanColumn = ({ id, title, tasks, isAdmin, isEditMode, onRenameColumn, onDeleteColumn, onEditTask, activeId }: KanbanColumnProps) => {
   const { setNodeRef } = useDroppable({ id });
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState(title);
@@ -36,42 +37,42 @@ export const KanbanColumn = ({ id, title, tasks, isAdmin, isEditMode, onRenameCo
   };
 
   return (
-    <div className="w-64 bg-[#201f31] rounded-lg p-3 flex-shrink-0">
-      <div className="flex items-center justify-between mb-4 px-2">
-        {isEditingTitle && isAdmin ? (
-          <input
-            type="text"
-            value={newTitle}
-            onChange={handleTitleChange}
-            onBlur={handleTitleSave}
-            onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
-            className="w-full bg-gray-700/50 text-white rounded-md px-2 py-1 text-sm font-bold"
-            autoFocus
-          />
-        ) : (
-          <div className="flex items-center gap-2">
-            <h3 className="font-bold text-white text-sm" onClick={() => isAdmin && isEditMode && setIsEditingTitle(true)}>
-              {title} ({tasks.length})
-            </h3>
-            {isAdmin && isEditMode && (
-                <button onClick={() => onDeleteColumn(id)} className="text-gray-400 hover:text-red-500 transition-colors">
-                    <TrashIcon />
-                </button>
-            )}
+      <div className="w-64 bg-[#201f31] rounded-lg p-3 flex-shrink-0">
+          <div className="flex items-center justify-between mb-4 px-2">
+              {isEditingTitle && isAdmin ? (
+                  <input
+                      type="text"
+                      value={newTitle}
+                      onChange={handleTitleChange}
+                      onBlur={handleTitleSave}
+                      onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
+                      className="w-full bg-gray-700/50 text-white rounded-md px-2 py-1 text-sm font-bold"
+                      autoFocus
+                  />
+              ) : (
+                  <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-white text-sm" onClick={() => isAdmin && isEditMode && setIsEditingTitle(true)}>
+                          {title} ({tasks.length})
+                      </h3>
+                      {isAdmin && isEditMode && (
+                          <button onClick={() => onDeleteColumn(id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                              <TrashIcon />
+                          </button>
+                      )}
+                  </div>
+              )}
           </div>
-        )}
+          <SortableContext
+              id={id}
+              items={tasks.map(t => t.id)}
+              strategy={verticalListSortingStrategy}
+          >
+              <div ref={setNodeRef} className="space-y-3 min-h-[100px]">
+                  {tasks.map(task => (
+                      <TaskCard key={task.id} task={task} onEdit={() => onEditTask(task)} isAdmin={isAdmin} isEditMode={isEditMode} activeId={activeId} />
+                  ))}
+              </div>
+          </SortableContext>
       </div>
-      <SortableContext
-        id={id}
-        items={tasks.map(t => t.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        <div ref={setNodeRef} className="space-y-3 min-h-[100px]">
-          {tasks.map(task => (
-            <TaskCard key={task.id} task={task} onEdit={() => onEditTask(task)} isAdmin={isAdmin} isEditMode={isEditMode} />
-          ))}
-        </div>
-      </SortableContext>
-    </div>
   );
 };

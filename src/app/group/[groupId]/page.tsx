@@ -21,6 +21,7 @@ import RecruitmentTab from '@/components/group/RecruitmentTab';
 import AnalyticsTab from '@/components/group/AnalyticsTab';
 import ProposeProjectModal from '@/components/group/ProposeProjectModal';
 import ScanHistoryTab from '@/components/group/ScanHistoryTab';
+import GroupSettingsTab from '@/components/group/GroupSettingsTab';
 
 // --- Iconos ---
 const PlusIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
@@ -39,6 +40,7 @@ const BriefcaseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill
 const BarChartIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>;
 const DollarSignIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
 const HistoryIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"></path><path d="M12 7v5l2 2"></path></svg>;
+const SettingsIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83l-2.6 2.6a2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1.07 1.07c-.16.33-.48.57-.88.57s-.72-.24-.88-.57a1.65 1.65 0 0 0-1.07-1.07 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0l-2.6-2.6a2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.07-1.07c-.16-.33-.48-.57-.88-.57s-.72-.24-.88-.57a1.65 1.65 0 0 0 .33-1.82l-.06-.06a2 2 0 0 1 0-2.83l2.6-2.6a2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1.07-1.07c.16-.33.48-.57.88-.57s.72.24.88.57a1.65 1.65 0 0 0-1.82-.33l-.06-.06a2 2 0 0 1 0 2.83l2.6 2.6a2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82z"></path></svg>;
 
 const GroupPage = ({ params }: { params: { groupId: string } }) => {
     const { groupId } = use(params);
@@ -86,6 +88,7 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
     const isFollowing = followedScanGroups.includes(groupId);
     const isMember = profile?.memberOfGroups.some(group => group.id === groupId) || false;
     const isAdmin = profile?.memberOfGroups.some(group => group.id === groupId && group.role === 'admin') || false;
+    const canViewKanban = isMember || (groupData && groupData.kanban_is_public);
 
     const handleProposeProject = async ({ media, note, notify }: { media: Media, note: string, notify: boolean }) => {
         if (!profile || !groupData) return;
@@ -170,18 +173,21 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
                     <div className="mt-8">
                         <div className="flex border-b border-gray-700 mb-6 overflow-x-auto">
                             <button onClick={() => setActiveTab("projects")} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === "projects" ? "text-white border-[#ffbade]" : "text-gray-400 border-transparent hover:text-white"}`}>Proyectos</button>
-                            {isMember && (
+                            {canViewKanban && (
                                 <button onClick={() => setActiveTab("management")} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === "management" ? "text-white border-[#ffbade]" : "text-gray-400 border-transparent hover:text-white"}`}><ClipboardIcon /> Gestión</button>
                             )}
                             <button onClick={() => setActiveTab("announcements")} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === "announcements" ? "text-white border-[#ffbade]" : "text-gray-400 border-transparent hover:text-white"}`}>Anuncios</button>
                             <button onClick={() => setActiveTab("recruitment")} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === "recruitment" ? "text-white border-[#ffbade]" : "text-gray-400 border-transparent hover:text-white"}`}><BriefcaseIcon /> Reclutamiento</button>
                             <button onClick={() => setActiveTab("community")} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === "community" ? "text-white border-[#ffbade]" : "text-gray-400 border-transparent hover:text-white"}`}>Comunidad</button>
                             <button onClick={() => setActiveTab("members")} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === "members" ? "text-white border-[#ffbade]" : "text-gray-400 border-transparent hover:text-white"}`}>Miembros</button>
-                            {isMember && (
+                            {isAdmin && (
                                 <button onClick={() => setActiveTab("analytics")} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === "analytics" ? "text-white border-[#ffbade]" : "text-gray-400 border-transparent hover:text-white"}`}><BarChartIcon /> Analíticas</button>
                             )}
                             {isMember && (
                                 <button onClick={() => setActiveTab("history")} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === "history" ? "text-white border-[#ffbade]" : "text-gray-400 border-transparent hover:text-white"}`}><HistoryIcon /> Historial</button>
+                            )}
+                            {isAdmin && (
+                                <button onClick={() => setActiveTab("settings")} className={`px-4 sm:px-6 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === "settings" ? "text-white border-[#ffbade]" : "text-gray-400 border-transparent hover:text-white"}`}><SettingsIcon /> Configuración</button>
                             )}
                         </div>
 
@@ -209,7 +215,7 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
                                     )}
                                 </div>
                             )}
-                            {activeTab === "management" && isMember && <ProjectKanban isAdmin={isAdmin} members={groupData?.members} />}
+                            {activeTab === "management" && canViewKanban && <ProjectKanban isAdmin={isAdmin} members={groupData?.members} groupId={groupId} />}
                             {activeTab === "announcements" && (
                                 <div className="max-w-screen-md mx-auto space-y-4 py-8">
                                     {announcements.length > 0 ? (
@@ -252,7 +258,10 @@ const GroupPage = ({ params }: { params: { groupId: string } }) => {
                                     ))}
                                 </div>
                             )}
-                            {activeTab === "analytics" && isMember && <AnalyticsTab />}
+                            {activeTab === "analytics" && isAdmin && <AnalyticsTab />}
+                            {activeTab === "settings" && isAdmin && (
+                                <GroupSettingsTab groupData={groupData} isAdmin={isAdmin} onSettingsSaved={fetchGroupData} />
+                            )}
                         </div>
                     </div>
                 </div>

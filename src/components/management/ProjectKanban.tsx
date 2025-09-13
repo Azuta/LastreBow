@@ -10,26 +10,27 @@ import NewColumnModal from './NewColumnModal';
 import NewTaskModal from './NewTaskModal';
 import { arrayMove } from '@dnd-kit/sortable';
 import { useAuth } from '@/context/AuthContext';
-
-const initialTasks: Task[] = [
-    { id: '30002-378', mangaId: 30002, chapterNumber: '378', title: 'Berserk', coverImage: '', status: 'raw', assignedTo: [{ username: 'Kaiser', avatarUrl: 'https://i.pravatar.cc/150?u=user004' }], color: '#ffbade' },
-    { id: '105778-150', mangaId: 105778, chapterNumber: '150', title: 'Chainsaw Man', coverImage: '', status: 'translating', assignedTo: [], color: '#6ee7b7' },
-    { id: '30013-1100', mangaId: 30013, chapterNumber: '1100', title: 'One Piece', coverImage: '', status: 'cleaning', assignedTo: [], color: '#fcd34d' },
-    { id: '105398-205', mangaId: 105398, chapterNumber: '205', title: 'Solo Leveling', coverImage: '', status: 'typesetting', assignedTo: [{ username: 'Zephyr', avatarUrl: 'https://i.pravatar.cc/150?u=user005' }], color: '#f87171' },
-    { id: '120980-95', mangaId: 120980, chapterNumber: '95', title: 'Nano Machine', coverImage: '', status: 'quality-check', assignedTo: [], color: '#a78bfa' },
-];
+import { fetchKanbanTasks } from '@/services/fetchAniList';
 
 const PlusIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
 const CheckIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>;
 
-export default function ProjectKanban({ isAdmin, members }) {
-    const [tasks, setTasks] = useState<Task[]>(initialTasks);
+interface ProjectKanbanProps {
+    isAdmin: boolean;
+    members: { id: string, username: string, avatar_url: string }[];
+    groupId: string;
+}
+
+export default function ProjectKanban({ isAdmin, members, groupId }: ProjectKanbanProps) {
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [activeTask, setActiveTask] = useState<Task | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isNewColumnModalOpen, setIsNewColumnModalOpen] = useState(false);
     const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
     const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [activeId, setActiveId] = useState(null);
     
     const { addToast } = useAuth();
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -43,26 +44,57 @@ export default function ProjectKanban({ isAdmin, members }) {
     }, []);
 
     const [columns, setColumns] = useState(defaultColumns);
-
+    
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+    const loadKanbanTasks = async () => {
+        setIsLoading(true);
+        const fetchedTasks = await fetchKanbanTasks(groupId);
+        setTasks(fetchedTasks);
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        if (groupId) {
+            loadKanbanTasks();
+        }
+    }, [groupId]);
 
     const handleDragStart = (event) => {
         const task = tasks.find(t => t.id === event.active.id);
         if (task) setActiveTask(task);
+        setActiveId(event.active.id);
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
         setActiveTask(null);
+        setActiveId(null);
         const { active, over } = event;
 
         if (!over) return;
-        if (active.id === over.id) return;
         
         const sourceColumn = tasks.find(t => t.id === active.id)?.status;
-        const destinationColumn = over.id as TaskStatus;
+        const destinationId = over.id.toString();
+        const destinationColumn = Object.keys(columns).find(colId => 
+            colId === destinationId || groupedTasks[colId].some(t => t.id === destinationId)
+        );
+
+        if (!destinationColumn) return;
 
         if (sourceColumn !== destinationColumn) {
             setTasks(prevTasks => prevTasks.map(t => t.id === active.id ? { ...t, status: destinationColumn } : t));
+        } else {
+            const currentTasks = groupedTasks[sourceColumn];
+            const oldIndex = currentTasks.findIndex(t => t.id === active.id);
+            const newIndex = currentTasks.findIndex(t => t.id === over.id);
+            
+            if (oldIndex !== newIndex) {
+                const newOrder = arrayMove(currentTasks, oldIndex, newIndex);
+                setTasks(prevTasks => {
+                    const otherTasks = prevTasks.filter(t => t.status !== sourceColumn);
+                    return [...otherTasks, ...newOrder];
+                });
+            }
         }
     };
     
@@ -82,7 +114,6 @@ export default function ProjectKanban({ isAdmin, members }) {
         setIsNewColumnModalOpen(false);
         addToast(`Columna "${columnName}" agregada con éxito.`, 'success');
 
-        // Scroll hasta el final
         setTimeout(() => {
             if (scrollContainerRef.current) {
                 scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
@@ -111,9 +142,9 @@ export default function ProjectKanban({ isAdmin, members }) {
     const handleAddTask = (newTaskData: { title: string, assignedTo: { username: string, avatarUrl: string }[], color: string }) => {
         const newTask = {
             id: `task-${Date.now()}`,
-            mangaId: 0, // Por ahora un ID de prueba
-            chapterNumber: '', // Por ahora un capítulo de prueba
-            status: 'raw', // Por defecto a la primera columna
+            mangaId: 0,
+            chapterNumber: '',
+            status: 'raw',
             ...newTaskData,
         };
         setTasks(prevTasks => [newTask, ...prevTasks]);
@@ -166,28 +197,39 @@ export default function ProjectKanban({ isAdmin, members }) {
                     </>
                 )}
             </div>
-            <div ref={scrollContainerRef} className="overflow-x-auto">
-                <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                    <div className="flex gap-4">
-                        {Object.entries(columns).map(([id, column]) => (
-                            <KanbanColumn
-                                key={id}
-                                id={id}
-                                title={column.title}
-                                tasks={groupedTasks[id]}
-                                isAdmin={isAdmin}
-                                isEditMode={isEditMode}
-                                onRenameColumn={handleRenameColumn}
-                                onDeleteColumn={handleDeleteColumn}
-                                onEditTask={handleEditTask}
-                            />
-                        ))}
-                    </div>
-                     <DragOverlay>
-                        {activeTask ? <TaskCard task={activeTask} onEdit={() => {}} isAdmin={isAdmin} isEditMode={isEditMode} /> : null}
-                    </DragOverlay>
-                </DndContext>
-            </div>
+            {isLoading ? (
+                <p className="text-center text-white">Cargando tablero...</p>
+            ) : (
+                <div ref={scrollContainerRef} className="overflow-x-auto">
+                    {Object.keys(columns).length > 0 ? (
+                        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                            <div className="flex gap-4">
+                                {Object.entries(columns).map(([id, column]) => (
+                                    <KanbanColumn
+                                        key={id}
+                                        id={id}
+                                        title={column.title}
+                                        tasks={groupedTasks[id]}
+                                        isAdmin={isAdmin}
+                                        isEditMode={isEditMode}
+                                        onRenameColumn={handleRenameColumn}
+                                        onDeleteColumn={handleDeleteColumn}
+                                        onEditTask={handleEditTask}
+                                        activeId={activeId}
+                                    />
+                                ))}
+                            </div>
+                            <DragOverlay>
+                                {activeTask ? <TaskCard task={activeTask} onEdit={() => {}} isAdmin={isAdmin} isEditMode={isEditMode} isOverlay={true} /> : null}
+                            </DragOverlay>
+                        </DndContext>
+                    ) : (
+                        <div className="text-center py-20 bg-[#201f31] rounded-lg">
+                            <p className="text-gray-400">No hay columnas para mostrar. Agrega una para empezar.</p>
+                        </div>
+                    )}
+                </div>
+            )}
              <TaskEditModal
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}

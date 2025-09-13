@@ -11,24 +11,29 @@ interface TaskCardProps {
     onEdit: () => void;
     isAdmin: boolean;
     isEditMode: boolean;
+    activeId?: string | null;
+    isOverlay?: boolean;
 }
 
-export const TaskCard = ({ task, onEdit, isAdmin, isEditMode }: TaskCardProps) => {
+export const TaskCard = ({ task, onEdit, isAdmin, isEditMode, activeId, isOverlay = false }: TaskCardProps) => {
     const {
         attributes,
         listeners,
         setNodeRef,
         transform,
         transition,
-        isDragging,
-    } = useSortable({ id: task.id });
+    } = useSortable({ id: task.id, disabled: isOverlay });
 
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
-        backgroundColor: task.color || '#2b2d42',
-    };
+    const style = isOverlay
+        ? {
+            backgroundColor: task.color || '#2b2d42',
+        }
+        : {
+            transform: CSS.Transform.toString(transform),
+            transition,
+            opacity: activeId === task.id ? 0 : 1,
+            backgroundColor: task.color || '#2b2d42',
+        };
 
     return (
         <div
