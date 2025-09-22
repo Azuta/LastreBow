@@ -140,16 +140,37 @@ export const StatusColumns: { [key in TaskStatus]: string } = {
   published: 'Publicado',
 };
 
+export interface SubtaskAssignee {
+    profile: {
+        id: string;
+        username: string;
+        avatar_url: string;
+    };
+}
+
+export interface Subtask {
+    id: string;
+    title: string;
+    description: string | null;
+    completed: boolean;
+    created_at: string;
+    assignees: SubtaskAssignee[];
+}
+
 export interface Task {
-  id: string; // "mangaId-chapterNumber"
+  id: string;
   mangaId: number;
   chapterNumber: string;
   title: string;
   coverImage: string;
-  status: string; // Cambiado a string para ser dinámico
-  assignedTo?: { username: string; avatarUrl: string }[];
-  color?: string; // Nuevo campo para el color de la tarea
+  status: string;
+  assignedTo?: { id: string; username: string; avatarUrl: string }[];
+  color?: string;
+  description?: string;
+  due_date?: string;
+  subtasks?: Subtask[];
 }
+
 
 export interface Project extends Media {
     tasks: Task[];

@@ -1,204 +1,57 @@
-// src/mock/mediaData.ts
-import { Media, Chapter, Comment, UserList, Achievement } from "@/types/AniListResponse";
+// src/context/MediaContext.tsx
+"use client";
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { fetchAllMedia } from '@/services/fetchAniList'; // Corregido: Importa fetchAllMedia
 
-// --- DATOS PARA EL RANKING ---
-export const dailyRankingMock: Media[] = [
-    { "id": 30002, "title": { "english": "Berserk", "romaji": "Berserk", "native": "Berserk" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30002-Cul4OeN7bYtn.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx30002-Cul4OeN7bYtn.jpg", "medium": "", "color": null }, "genres": ["Action", "Seinen"], "averageScore": 92, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 105778, "title": { "english": "Chainsaw Man", "romaji": "Chainsaw Man", "native": "Chainsaw Man" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx105778-euxXZEIfDY2u.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx105778-euxXZEIfDY2u.png", "medium": "", "color": null }, "genres": ["Action", "Comedy"], "averageScore": 85, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 30013, "title": { "english": "One Piece", "romaji": "ONE PIECE", "native": "ONE PIECE" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30013-BeslEMqiPhlk.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx30013-BeslEMqiPhlk.jpg", "medium": "", "color": null }, "genres": ["Adventure", "Fantasy"], "averageScore": 91, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 105398, "title": { "english": "Solo Leveling", "romaji": "Na Honjaman Level Up", "native": "Na Honjaman Level Up" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx105398-b673Vt5ZSuz3.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx105398-b673Vt5ZSuz3.jpg", "medium": "", "color": null }, "genres": ["Action", "Fantasy"], "averageScore": 84, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 101517, "title": { "english": "Jujutsu Kaisen", "romaji": "Jujutsu Kaisen", "native": "Jujutsu Kaisen" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx101517-H3TdM3g5ZUe9.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx101517-H3TdM3g5ZUe9.jpg", "medium": "", "color": null }, "genres": ["Action", "Supernatural"], "averageScore": 80, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 53390, "title": { "english": "Attack on Titan", "romaji": "Shingeki no Kyojin", "native": "Shingeki no Kyojin" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx53390-1RsuABC34P9D.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx53390-1RsuABC34P9D.jpg", "medium": "", "color": null }, "genres": ["Action", "Drama"], "averageScore": 84, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 34632, "title": { "english": "Goodnight Punpun", "romaji": "Oyasumi Punpun", "native": "Oyasumi Punpun" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx34632-5xMDkx3pXsEh.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx34632-5xMDkx3pXsEh.png", "medium": "", "color": null }, "genres": ["Drama", "Psychological"], "averageScore": 88, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 31706, "title": { "english": "Steel Ball Run", "romaji": "Steel Ball Run", "native": "Steel Ball Run" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx31706-lRncu9VbcBB7.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx31706-lRncu9VbcBB7.png", "medium": "", "color": null }, "genres": ["Action", "Adventure"], "averageScore": 92, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 30656, "title": { "english": "Vagabond", "romaji": "Vagabond", "native": "Vagabond" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30656-9mW113O7rDnA.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx30656-9mW113O7rDnA.png", "medium": "", "color": null }, "genres": ["Action", "Drama"], "averageScore": 91, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 30642, "title": { "english": "Vinland Saga", "romaji": "Vinland Saga", "native": "Vinland Saga" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30642-0mjRDkf4THpo.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx30642-0mjRDkf4THpo.jpg", "medium": "", "color": null }, "genres": ["Action", "Adventure"], "averageScore": 90, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 87216, "title": { "english": "Demon Slayer", "romaji": "Kimetsu no Yaiba", "native": "Kimetsu no Yaiba" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx87216-c9bSNVD10UuD.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx87216-c9bSNVD10UuD.png", "medium": "", "color": null }, "genres": ["Action", "Supernatural"], "averageScore": 79, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 63327, "title": { "english": "Tokyo Ghoul", "romaji": "Tokyo Ghoul", "native": "Tokyo Ghoul" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx63327-glC9cDxYBja9.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx63327-glC9cDxYBja9.png", "medium": "", "color": null }, "genres": ["Horror", "Psychological"], "averageScore": 84, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-];
+interface MediaRow {
+  id: number;
+  title: {
+    romaji: string;
+  };
+  coverImage: {
+    large: string;
+  };
+}
 
-export const weeklyRankingMock: Media[] = [
-    { "id": 120980, "title": { "english": "Nano Machine", "romaji": "Nano Machine", "native": "Nano Machine" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx120980-RZ9WLd0o9hyo.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx120980-RZ9WLd0o9hyo.jpg", "medium": "", "color": null }, "genres": ["Action", "Sci-Fi"], "averageScore": 82, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 159441, "title": { "english": "Pick Me Up", "romaji": "Pick Me Up!", "native": "Pick Me Up!" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx159441-n919hUzb0j44.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx159441-n919hUzb0j44.jpg", "medium": "", "color": null }, "genres": ["Action", "Fantasy"], "averageScore": 83, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 119257, "title": { "english": "Omniscient Reader", "romaji": "Jeonjijeok Dokja Sijeom", "native": "Jeonjijeok Dokja Sijeom" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx119257-Pi21aq3ey9GG.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx119257-Pi21aq3ey9GG.jpg", "medium": "", "color": null }, "genres": ["Action", "Adventure"], "averageScore": 86, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 128067, "title": { "english": "SSS-Class Revival Hunter", "romaji": "SSS-geup Jugeoya Saneun Hunter", "native": "SSS-geup Jugeoya Saneun Hunter" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx128067-wnLBg6Cy1ncs.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx128067-wnLBg6Cy1ncs.jpg", "medium": "", "color": null }, "genres": ["Action", "Fantasy"], "averageScore": 82, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 120385, "title": { "english": "Log-in Murim", "romaji": "Log-in Murim", "native": "Log-in Murim" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx120385-4JYGuOR6cn72.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx120385-4JYGuOR6cn72.jpg", "medium": "", "color": null }, "genres": ["Action", "Fantasy"], "averageScore": 79, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-];
+interface MediaContextType {
+  mediaRows: MediaRow[];
+  isLoading: boolean;
+}
 
-export const monthlyRankingMock: Media[] = [
-    { "id": 87216, "title": { "english": "Demon Slayer", "romaji": "Kimetsu no Yaiba", "native": "Kimetsu no Yaiba" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx87216-c9bSNVD10UuD.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx87216-c9bSNVD10UuD.png", "medium": "", "color": null }, "genres": ["Action", "Supernatural"], "averageScore": 79, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 63327, "title": { "english": "Tokyo Ghoul", "romaji": "Tokyo Ghoul", "native": "Tokyo Ghoul" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx63327-glC9cDxYBja9.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx63327-glC9cDxYBja9.png", "medium": "", "color": null }, "genres": ["Horror", "Psychological"], "averageScore": 84, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 30002, "title": { "english": "Berserk", "romaji": "Berserk", "native": "Berserk" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30002-Cul4OeN7bYtn.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx30002-Cul4OeN7bYtn.jpg", "medium": "", "color": null }, "genres": ["Action", "Seinen"], "averageScore": 92, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 105778, "title": { "english": "Chainsaw Man", "romaji": "Chainsaw Man", "native": "Chainsaw Man" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx105778-euxXZEIfDY2u.png", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx105778-euxXZEIfDY2u.png", "medium": "", "color": null }, "genres": ["Action", "Comedy"], "averageScore": 85, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-    { "id": 30013, "title": { "english": "One Piece", "romaji": "ONE PIECE", "native": "ONE PIECE" }, "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30013-BeslEMqiPhlk.jpg", "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx30013-BeslEMqiPhlk.jpg", "medium": "", "color": null }, "genres": ["Adventure", "Fantasy"], "averageScore": 91, "bannerImage": null, "chapters": null, "description": "", "episodes": null, "format": "MANGA", "popularity": 0, "status": "RELEASING", "type": "MANGA" },
-];
+const MediaContext = createContext<MediaContextType | undefined>(undefined);
 
-export const mockContinueReading: Media[] = [
-    dailyRankingMock[0], dailyRankingMock[2], weeklyRankingMock[1]
-];
-export const mockNewChapters: Media[] = [
-    dailyRankingMock[1], weeklyRankingMock[3], dailyRankingMock[3]
-];
+export const MediaProvider = ({ children }: { children: ReactNode }) => {
+  const [mediaRows, setMediaRows] = useState<MediaRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-// --- DATOS PARA LAS SECCIONES DE LA PÁGINA PRINCIPAL ---
-export const mockMediaRows: { title: string; data: Media[] }[] = [
-    {
-        "title": "Trending", "data": dailyRankingMock.slice(0, 7)
-    },
-    {
-        "title": "Popular", "data": weeklyRankingMock.slice(0, 7)
-    },
-    {
-        "title": "Most Favorited", "data": monthlyRankingMock.slice(0, 7)
-    }
-];
+  useEffect(() => {
+    const loadMedia = async () => {
+      setIsLoading(true);
+      try {
+        // --- INICIO DE LA LÓGICA CORREGIDA ---
+        const rows = await fetchAllMedia(); // Corregido: Llama a la función correcta
+        // --- FIN DE LA LÓGICA CORREGIDA ---
+        setMediaRows(rows);
+      } catch (error) {
+        console.error("Failed to fetch media rows:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadMedia();
+  }, []);
 
-export const mockChaptersList: Chapter[] = [
-    {
-        chapterNumber: "377",
-        title: "El Rugido del Dragón",
-        uploads: [
-            { id: "nss-377", scanGroup: "No Sleep Scans", uploadedAt: "hace 1 día", externalUrl: "https://nosleepscans.com/berserk/377", notes: "¡Disfruten del nuevo capítulo! Tuvimos que rehacer varias páginas para asegurar la máxima calidad." },
-            { id: "sgs-377", scanGroup: "Shadow Garden Scans", uploadedAt: "hace 23 horas", externalUrl: "https://shadowgardenscans.com/berserk/377" }
-        ]
-    },
-    {
-        chapterNumber: "376",
-        uploads: [
-            { id: "nss-376", scanGroup: "No Sleep Scans", uploadedAt: "hace 2 días" },
-        ]
-    },
-    {
-        chapterNumber: "375",
-        title: "La Llegada",
-        uploads: [
-            { id: "nss-375", scanGroup: "No Sleep Scans", uploadedAt: "hace 3 días" },
-            { id: "ifs-375", scanGroup: "Isekai Fanatics", uploadedAt: "hace 2 días", externalUrl: "https://isekaifans.com/berserk/375" }
-        ]
-    },
-    ...Array.from({ length: 25 }, (_, i) => ({
-        chapterNumber: `${374 - i}`,
-        uploads: [
-            { id: `nss-${374 - i}`, scanGroup: "No Sleep Scans", uploadedAt: `hace ${i + 4} días` }
-        ]
-    }))
-];
+  return (
+    <MediaContext.Provider value={{ mediaRows, isLoading }}>
+      {children}
+    </MediaContext.Provider>
+  );
+};
 
-export const mockComments: Comment[] = [
-    {
-        id: 1,
-        user: { username: "MangaFan", avatarUrl: "https://i.pravatar.cc/150?u=MangaFan" },
-        text: "¡Increíble! La calidad del arte de Miura nunca deja de sorprenderme. Este capítulo fue una obra maestra.",
-        createdAt: "hace 2 horas",
-        likes: 15,
-        parentId: null,
-    },
-    {
-        id: 2,
-        user: { username: "SakuraFan", avatarUrl: "https://i.pravatar.cc/150?u=SakuraFan" },
-        text: "No puedo esperar a ver cómo continúa esto. La trama se está poniendo cada vez más intensa.",
-        createdAt: "hace 5 horas",
-        likes: 8,
-        parentId: null,
-    },
-     {
-        id: 3,
-        user: { username: "SeinenEnjoyer", avatarUrl: "https://i.pravatar.cc/150?u=SeinenEnjoyer" },
-        text: "Totalmente de acuerdo. [spoiler]La revelación sobre el Caballero de la Calavera fue una locura.[/spoiler]",
-        createdAt: "hace 4 horas",
-        likes: 5,
-        parentId: 2,
-    },
-    {
-        id: 4,
-        user: { username: "MangaFan", avatarUrl: "https://i.pravatar.cc/150?u=MangaFan" },
-        text: "¡Cuidado con los spoilers! Pero sí, fue genial.",
-        createdAt: "hace 3 horas",
-        likes: 2,
-        parentId: 3,
-    },
-];
-
-export const mockUserLists: UserList[] = [
-    {
-        id: 'seinen-gems',
-        name: 'Joyas Ocultas del Seinen',
-        description: 'Algunos de los mejores seinens que no todos conocen.',
-        itemCount: 3,
-        coverImages: [
-            dailyRankingMock[6].coverImage.large, // Goodnight Punpun
-            dailyRankingMock[8].coverImage.large, // Vagabond
-            dailyRankingMock[9].coverImage.large, // Vinland Saga
-        ],
-        user: { username: 'Dymedis' }
-    },
-    {
-        id: 'manhwa-action',
-        name: 'Manhwas de Acción Imperdibles',
-        description: 'Adrenalina pura desde Corea.',
-        itemCount: 3,
-        coverImages: [
-            weeklyRankingMock[0].coverImage.large, // Nano Machine
-            weeklyRankingMock[1].coverImage.large, // Pick Me Up
-            weeklyRankingMock[2].coverImage.large, // Omniscient Reader
-        ],
-        user: { username: 'Dymedis' },
-        collaborators: [{ username: "SakuraFan", avatarUrl: "https://i.pravatar.cc/150?u=SakuraFan" }]
-    }
-];
-
-export const mockAchievements: Achievement[] = [
-    { id: 'read-10', name: 'Lector Novato', description: 'Lee 10 capítulos en total.', type: 'reading', progress: 10, goal: 10, icon: 'BookOpenIcon' },
-    { id: 'read-100', name: 'Lector Habitual', description: 'Lee 100 capítulos en total.', type: 'reading', progress: 88, goal: 100, icon: 'BookOpenIcon' },
-    { id: 'seinen-lover', name: 'Amante del Seinen', description: 'Lee 15 mangas del género Seinen.', type: 'genre', progress: 12, goal: 15, icon: 'FlameIcon' },
-    { id: 'pioneer', name: 'Pionero', description: 'Lee un capítulo menos de una hora después de su publicación.', type: 'community', progress: 0, goal: 1, icon: 'CrownIcon' },
-];
-
-// Mock para un solo item por ID
-export const mockMediaById: Media = {
-    id: 30002,
-    scanGroupId: "group001",
-    chapterList: mockChaptersList,
-    comments: mockComments,
-    title: {
-        romaji: "Berserk",
-        english: "Berserk",
-        native: "ベルセルク"
-    },
-    coverImage: {
-        extraLarge: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx30002-sCN3X1fW1FBU.jpg",
-        large: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30002-sCN3X1fW1FBU.jpg",
-        medium: "",
-        color: "#E4A15D"
-    },
-    bannerImage: "https://s4.anilist.co/file/anilistcdn/media/manga/banner/m30002-Qxs7j430c4aE.jpg",
-    description: "Guts, a former mercenary now known as the \"Black Swordsman\", is out for revenge. After a tumultuous childhood, he finally finds someone he respects and believes he can trust, only to have everything taken away from him when this person takes away everything Guts held dear in order to fulfill his own desires. Now marked for death, Guts becomes condemned to a fate in which he is relentlessly pursued by demonic beings.<br><br>Setting out on a dreadful quest riddled with misfortune, Guts, armed with a massive sword and monstrous strength, will let nothing stop him, not even death itself, until he is finally able to take the head of the one who stripped him—and his loved one—of their humanity.",
-    chapters: 377,
-    episodes: null,
-    genres: ["Action", "Adventure", "Drama", "Fantasy", "Horror", "Supernatural"],
-    averageScore: 94,
-    popularity: 66532,
-    status: 'RELEASING',
-    format: 'MANGA',
-    type: 'MANGA',
-    trailer: {
-        id: "qc6406yq1d4",
-        site: "youtube"
-    },
-    staff: [
-        { id: 1, name: "Kentarou Miura", role: "Story & Art", image: "https://s4.anilist.co/file/anilistcdn/staff/s/n96913-6DDPAz2PS1Gg.jpg" },
-    ],
-    characters: [
-        { id: 1, name: "Guts", role: "MAIN", image: "https://s4.anilist.co/file/anilistcdn/character/large/b40-330m2t7N5S4A.png" },
-    ],
-    relations: [
-        {
-            id: 1,
-            relationType: "ADAPTATION",
-            media: { id: 21, title: { romaji: "Kenpuu Denki Berserk", english: "Berserk (1997)", native: "剣風伝奇ベルセルク" }, format: "ANIME", status: "FINISHED", type: "ANIME", coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21-e3Yb52iJm23V.jpg", extraLarge: "", medium: "", color: "" }, description: "", episodes: 25, chapters: null, genres: [], averageScore: 0, popularity: 0 }
-        },
-    ],
-    recommendations: [
-        { id: 1, media: { id: 30656, title: { romaji: "Vagabond", english: "Vagabond", native: "バガボンド" }, format: "MANGA", status: "HIATUS", type: "MANGA", coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30656-9mW113O7rDnA.png", extraLarge: "", medium: "", color: "" }, description: "", episodes: null, chapters: null, genres: [], averageScore: 0, popularity: 0 } },
-    ]
+export const useMedia = () => {
+  const context = useContext(MediaContext);
+  if (context === undefined) {
+    throw new Error('useMedia must be used within a MediaProvider');
+  }
+  return context;
 };

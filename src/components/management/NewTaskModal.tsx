@@ -4,19 +4,28 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
+import { Media } from '@/types/AniListResponse'; // Importa Media
+
+interface AssignedMember {
+    id: string;
+    username: string;
+    avatar_url: string;
+}
 
 interface NewTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAddTask: (task: { title: string, assignedTo: { username: string, avatarUrl: string }[], color: string }) => void;
+    onAddTask: (task: { title: string, projectId: number | null, assignedTo: AssignedMember[], color: string }) => void;
     members: { id: string, username: string, avatar_url: string }[];
+    projects: Media[]; // Añade los proyectos del grupo
 }
 
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18"/><path d="M6 6L18 18"/></svg>;
 
-const NewTaskModal = ({ isOpen, onClose, onAddTask, members }: NewTaskModalProps) => {
+const NewTaskModal = ({ isOpen, onClose, onAddTask, members, projects }: NewTaskModalProps) => {
     const [taskTitle, setTaskTitle] = useState('');
-    const [assignedTo, setAssignedTo] = useState<{ username: string, avatarUrl: string }[]>([]);
+    const [projectId, setProjectId] = useState<number | null>(null);
+    const [assignedTo, setAssignedTo] = useState<AssignedMember[]>([]);
     const [color, setColor] = useState('#ffbade');
     const { addToast } = useAuth();
 
@@ -27,20 +36,18 @@ const NewTaskModal = ({ isOpen, onClose, onAddTask, members }: NewTaskModalProps
             addToast('El título de la tarea no puede estar vacío.', 'error');
             return;
         }
-        onAddTask({ title: taskTitle, assignedTo, color });
+        onAddTask({ title: taskTitle, projectId, assignedTo, color });
         setTaskTitle('');
         setAssignedTo([]);
         setColor('#ffbade');
+        setProjectId(null);
     };
 
-    const handleToggleAssignee = (member) => {
+    const handleToggleAssignee = (member: AssignedMember) => {
         setAssignedTo(prev => {
-            const isAssigned = prev.some(u => u.username === member.username);
-            if (isAssigned) {
-                return prev.filter(u => u.username !== member.username);
-            } else {
-                return [...prev, { username: member.username, avatarUrl: member.avatar_url }];
-            }
+            const isAssigned = prev.some(u => u.id === member.id);
+            if (isAssigned) { return prev.filter(u => u.id !== member.id); }
+            else { return [...prev, member]; }
         });
     };
 
@@ -56,28 +63,26 @@ const NewTaskModal = ({ isOpen, onClose, onAddTask, members }: NewTaskModalProps
                 <div className="space-y-4">
                     <div>
                         <label htmlFor="taskTitle" className="block text-sm font-medium text-gray-300 mb-2">Título de la Tarea</label>
-                        <input
-                            id="taskTitle"
-                            type="text"
-                            value={taskTitle}
-                            onChange={(e) => setTaskTitle(e.target.value)}
-                            className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffbade]"
-                            placeholder="Ej: Traducir capítulo 150"
-                        />
+                        <input id="taskTitle" type="text" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffbade]" placeholder="Ej: Traducir capítulo 150" />
                     </div>
+                    {/* --- CAMPO PARA SELECCIONAR PROYECTO --- */}
+                    <div>
+                        <label htmlFor="projectId" className="block text-sm font-medium text-gray-300 mb-2">Proyecto (Opcional)</label>
+                        <select id="projectId" value={projectId || ''} onChange={(e) => setProjectId(Number(e.target.value) || null)} className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffbade]">
+                            <option value="">Tarea general (sin proyecto)</option>
+                            {projects.map(project => (
+                                <option key={project.id} value={project.id}>{project.title.romaji}</option>
+                            ))}
+                        </select>
+                    </div>
+                    {/* --- FIN DEL CAMPO --- */}
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">Asignar a</label>
                         <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
                             {members.map(member => (
-                                <div
-                                    key={member.id}
-                                    onClick={() => handleToggleAssignee(member)}
-                                    className={`flex items-center gap-4 p-2 rounded-lg cursor-pointer transition-colors ${assignedTo.some(u => u.username === member.username) ? 'bg-[#ffbade] text-black' : 'hover:bg-gray-700/50'}`}
-                                >
-                                    <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                                        <Image src={member.avatar_url} alt={member.username} fill sizes="40px" />
-                                    </div>
-                                    <span className={`font-semibold ${assignedTo.some(u => u.username === member.username) ? 'text-black' : 'text-white'}`}>{member.username}</span>
+                                <div key={member.id} onClick={() => handleToggleAssignee(member)} className={`flex items-center gap-4 p-2 rounded-lg cursor-pointer transition-colors ${assignedTo.some(u => u.id === member.id) ? 'bg-[#ffbade] text-black' : 'hover:bg-gray-700/50'}`}>
+                                    <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0"><Image src={member.avatar_url} alt={member.username} fill sizes="40px" /></div>
+                                    <span className={`font-semibold ${assignedTo.some(u => u.id === member.id) ? 'text-black' : 'text-white'}`}>{member.username}</span>
                                 </div>
                             ))}
                         </div>
@@ -85,15 +90,7 @@ const NewTaskModal = ({ isOpen, onClose, onAddTask, members }: NewTaskModalProps
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">Color de la Tarjeta</label>
                         <div className="flex gap-2">
-                            {colors.map(c => (
-                                <button
-                                    key={c}
-                                    type="button"
-                                    onClick={() => setColor(c)}
-                                    className={`w-8 h-8 rounded-full border-2 ${color === c ? 'border-white' : 'border-transparent'}`}
-                                    style={{ backgroundColor: c }}
-                                ></button>
-                            ))}
+                            {colors.map(c => (<button key={c} type="button" onClick={() => setColor(c)} className={`w-8 h-8 rounded-full border-2 ${color === c ? 'border-white' : 'border-transparent'}`} style={{ backgroundColor: c }}></button>))}
                         </div>
                     </div>
                     <div className="flex justify-end gap-4 pt-4">
