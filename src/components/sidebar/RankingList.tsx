@@ -1,11 +1,11 @@
 "use client";
-import React, { useState, useMemo } from 'react';
-import { dailyRankingMock, weeklyRankingMock, monthlyRankingMock } from '@/mock/mediaData'; // <-- 1. Importa los nuevos datos
+import React, { useState, useEffect, useMemo } from 'react';
+import { fetchRankingMedia } from '@/services/fetchAniList';
 import Image from 'next/image';
 import { Media } from '@/types/AniListResponse';
 
-// El componente RankingItem no necesita cambios
 const RankingItem = ({ media, rank }: { media: Media; rank: number }) => {
+  // Esta línea ahora funcionará porque `media.title` será un objeto.
   const title = media.title.english || media.title.romaji;
   return (
     <li className="flex items-center space-x-3 group">
@@ -34,23 +34,24 @@ const RankingItem = ({ media, rank }: { media: Media; rank: number }) => {
 const RankingList = () => {
   const [activeTab, setActiveTab] = useState('Diario');
   const [showMore, setShowMore] = useState(false);
+  const [rankingData, setRankingData] = useState<Media[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const tabs = ['Diario', 'Semanal', 'Mensual'];
 
-  // <-- 2. Lógica para seleccionar los datos correctos
-  const rankingData = useMemo(() => {
-    switch (activeTab) {
-      case 'Diario':
-        return dailyRankingMock;
-      case 'Semanal':
-        return weeklyRankingMock;
-      case 'Mensual':
-        return monthlyRankingMock;
-      default:
-        return dailyRankingMock;
-    }
+  useEffect(() => {
+    const loadRankingData = async () => {
+      setIsLoading(true);
+      let criteria: 'popularity' | 'average_score' = 'popularity';
+      if (activeTab === 'Semanal') {
+        criteria = 'average_score';
+      }
+      const data = await fetchRankingMedia(criteria);
+      setRankingData(data);
+      setIsLoading(false);
+    };
+    loadRankingData();
   }, [activeTab]);
 
-  // <-- 3. Al cambiar de pestaña, reseteamos "showMore"
   const handleTabClick = (tab: string) => {
     setActiveTab(tab);
     setShowMore(false);
@@ -63,7 +64,7 @@ const RankingList = () => {
           {tabs.map(tab => (
             <button
               key={tab}
-              onClick={() => handleTabClick(tab)} // <-- 4. Usamos el nuevo handler
+              onClick={() => handleTabClick(tab)}
               className={`flex-1 py-2 text-sm font-semibold transition-colors ${
                 activeTab === tab 
                 ? 'text-white border-b-2 border-[#ffbade]' 
@@ -76,10 +77,14 @@ const RankingList = () => {
         </div>
       </div>
       <ol className="space-y-3">
-        {rankingData.slice(0, showMore ? 12 : 5).map((media, index) => ( // Mostramos hasta 12
-          <RankingItem key={`${activeTab}-${media.id}`} media={media} rank={index + 1} />
-        ))}
-        {!showMore && rankingData.length > 5 && (
+        {isLoading ? (
+            <p className="text-xs text-gray-400 text-center">Cargando...</p>
+        ) : (
+            rankingData.slice(0, showMore ? 12 : 5).map((media, index) => (
+                <RankingItem key={`${activeTab}-${media.id}`} media={media} rank={index + 1} />
+            ))
+        )}
+        {!isLoading && !showMore && rankingData.length > 5 && (
             <li 
                 onClick={() => setShowMore(true)} 
                 className="pt-2 cursor-pointer text-center text-gray-400 hover:text-white"

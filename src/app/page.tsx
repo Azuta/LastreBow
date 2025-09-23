@@ -9,16 +9,15 @@ import { Media } from "@/types/AniListResponse";
 import RankingList from '@/components/sidebar/RankingList';
 import ChatBox from '@/components/sidebar/ChatBox';
 import { MangaCardSkeleton } from "@/components/ui/skeletons/MangaCardSkeleton";
-import { mockContinueReading } from "@/mock/mediaData";
 
 const Home = () => {
   const [mediaRows, setMediaRows] = useState<{ title: string; data: Media[] }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, favorites } = useAuth();
   const [activeTab, setActiveTab] = useState('General');
   const [newChapters, setNewChapters] = useState<Media[]>([]);
   const [recommendations, setRecommendations] = useState<Media[]>([]);
-  const [continueReading, setContinueReading] = useState<Media[]>([]); // <-- Nuevo estado
+  const [continueReading, setContinueReading] = useState<Media[]>([]);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -48,7 +47,6 @@ const Home = () => {
       loadNewChapters();
   }, [isLoggedIn, user]);
 
-    // <-- NUEVO useEffect para cargar la lista "Continuar Leyendo"
   useEffect(() => {
     const loadContinueReading = async () => {
       if (isLoggedIn && user) {
@@ -61,7 +59,6 @@ const Home = () => {
     loadContinueReading();
   }, [isLoggedIn, user]);
 
-    // <-- NUEVO useEffect para cargar las recomendaciones
   useEffect(() => {
       const loadRecommendations = async () => {
           if (!isLoggedIn || !user) {
@@ -75,7 +72,6 @@ const Home = () => {
               ]);
               const combinedRecs = [...byAuthor, ...bySocial];
               
-              // Eliminar duplicados y mezclar para aleatoriedad
               const uniqueRecs = Array.from(new Map(combinedRecs.map(item => [item.id, item])).values());
               setRecommendations(uniqueRecs.sort(() => 0.5 - Math.random()));
 
@@ -88,13 +84,13 @@ const Home = () => {
   }, [isLoggedIn, user]);
 
   const forYouMedia = useMemo(() => {
-    if (!isLoggedIn || !user?.favorites) return [];
-    const favoriteGenres = new Set(user.favorites.flatMap(fav => fav.genres));
+    if (!isLoggedIn || !favorites) return [];
+    const favoriteGenres = new Set(favorites.flatMap(fav => fav.genres));
     const recommended = mediaRows.flatMap(row => row.data).filter(media =>
-      media.genres.some(genre => favoriteGenres.has(genre)) && !user.favorites.some(fav => fav.id === media.id)
+      media.genres.some(genre => favoriteGenres.has(genre)) && !favorites.some(fav => fav.id === media.id)
     );
     return Array.from(new Map(recommended.map(item => [item.id, item])).values());
-  }, [isLoggedIn, user, mediaRows]);
+  }, [isLoggedIn, favorites, mediaRows]);
 
   const renderLoadingSkeleton = () => (
     <div className="space-y-12">
@@ -113,13 +109,12 @@ const Home = () => {
   );
 
   const renderContent = () => {
-if (activeTab === 'Para Ti') {
+    if (activeTab === 'Para Ti') {
       if (!isLoggedIn) {
         return <p className="text-gray-400 text-center">Inicia sesión para ver tu contenido personalizado.</p>
       }
       return (
         <>
-            {/* <-- Usa el estado real en lugar del mock */}
             {continueReading.length > 0 && <MangaSection key="continue-reading" title="Continuar Leyendo" media={continueReading} />}
 
             {newChapters.length > 0 ? (

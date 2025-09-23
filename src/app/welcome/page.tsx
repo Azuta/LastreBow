@@ -8,12 +8,10 @@ import { Media } from '@/types/AniListResponse';
 import { fetchAllMedia } from '@/services/fetchAniList';
 import MangaCard from '@/components/ui/cards/MangaCard';
 import { MangaCardSkeleton } from '@/components/ui/skeletons/MangaCardSkeleton';
-import { mockMediaRows } from '@/mock/mediaData';
 
 const CheckIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>;
 const GenderIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 5V19"></path><path d="M17.9 10.1C16.4 11.6 14.1 12 12 12C9.9 12 7.6 11.6 6.1 10.1"></path></svg>;
 
-// --- URLs de imágenes por defecto ---
 const DEFAULT_AVATARS = {
     Hombre: "https://pub-429d871e8d3c43d486ddf826e3b19f8e.r2.dev/b2cc0ddf-339e-4bfc-ae06-f7b6473c6f9c/male_default_img.jpg",
     Mujer: "https://pub-429d871e8d3c43d486ddf826e3b19f8e.r2.dev/b2cc0ddf-339e-4bfc-ae06-f7b6473c6f9c/female_default_img.jpg",
@@ -21,7 +19,6 @@ const DEFAULT_AVATARS = {
 };
 
 const WelcomePage = () => {
-    // --- LÍNEA CORREGIDA: Agregamos `addToast` ---
     const { user, profile, updateUserProfile, addToast } = useAuth();
     const router = useRouter();
     
@@ -38,7 +35,7 @@ const WelcomePage = () => {
     
     const filteredManga = useMemo(() => {
         if (!searchTerm) {
-            return allMedia.slice(0, 5);
+            return allMedia.slice(0, 14);
         }
         return allMedia.filter(manga =>
             manga.title.romaji.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -78,14 +75,11 @@ const WelcomePage = () => {
                 updates.gender = finalGender;
             }
             
-            // --- NUEVA LÓGICA: Asigna la URL de la imagen por defecto ---
-            let defaultAvatarUrl = DEFAULT_AVATARS['Otro']; // Avatar por defecto genérico
+            let defaultAvatarUrl = DEFAULT_AVATARS['Otro'];
             if (gender === 'Hombre') {
                 defaultAvatarUrl = DEFAULT_AVATARS['Hombre'];
             } else if (gender === 'Mujer') {
                 defaultAvatarUrl = DEFAULT_AVATARS['Mujer'];
-            } else if (gender === 'Otro') {
-                defaultAvatarUrl = DEFAULT_AVATARS['Otro'];
             }
             updates.avatar_url = defaultAvatarUrl;
 
@@ -121,7 +115,7 @@ const WelcomePage = () => {
 
                         {isInitialLoading ? (
                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-4">
-                                {Array.from({ length: 5 }).map((_, i) => (
+                                {Array.from({ length: 7 }).map((_, i) => (
                                     <MangaCardSkeleton key={i} />
                                 ))}
                             </div>

@@ -13,127 +13,12 @@ import { useAuth } from "@/context/AuthContext";
 import { createClient } from '@/lib/supabaseClient';
 import { fetchMediaById } from '@/services/fetchAniList'; 
 
-// --- Icono para el formulario de subida (sin cambios) ---
-const UploadCloudIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>;
-
-// --- Componente para la Pestaña de Subida/Edición de Capítulos (sin cambios) ---
-const ChapterManagementTab = ({ media, onSave }: { media: Media; onSave: () => void; }) => {
-    const { user, addToast } = useAuth();
-    const [pages, setPages] = useState<File[]>([]);
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const supabase = createClient();
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!user) {
-            addToast("Necesitas iniciar sesión para subir un capítulo", "error");
-            return;
-        }
-        if (pages.length === 0) {
-            addToast("Debes seleccionar al menos una imagen para el capítulo", "error");
-            return;
-        }
-
-        setIsUploading(true);
-        setUploadProgress(0);
-        const formElements = new FormData(e.currentTarget);
-        const chapterNumber = formElements.get('chapter-number') as string;
-        const title = formElements.get('chapter-title') as string | null;
-        const notes = formElements.get('chapter-notes') as string | null;
-
-        const pageUrls: string[] = [];
-        let uploadedCount = 0;
-
-        for (const file of pages) {
-            const filePath = `${media.id}/${chapterNumber}/${Date.now()}_${file.name}`;
-            const { data, error: uploadError } = await supabase.storage.from('chapter-images').upload(filePath, file);
-
-            if (uploadError) {
-                console.error("Error uploading file:", uploadError);
-                addToast(`Error al subir ${file.name}. Inténtalo de nuevo.`, "error");
-                setIsUploading(false);
-                return;
-            }
-            
-            const { data: { publicUrl } } = supabase.storage.from('chapter-images').getPublicUrl(data.path);
-            pageUrls.push(publicUrl);
-
-            uploadedCount++;
-            setUploadProgress((uploadedCount / pages.length) * 100);
-        }
-
-        const { error: dbError } = await supabase.from('chapters').insert({
-            media_id: media.id,
-            user_id: user.id,
-            chapter_number: chapterNumber,
-            title: title || null,
-            notes: notes || null,
-            page_urls: pageUrls
-        });
-
-        if (dbError) {
-            console.error("Error saving chapter metadata:", dbError);
-            addToast("Error al guardar la información del capítulo.", "error");
-        } else {
-            addToast(`Capítulo ${chapterNumber} subido con éxito!`, "success");
-            onSave();
-        }
-        
-        setIsUploading(false);
-        setUploadProgress(0);
-        setPages([]);
-        (e.target as HTMLFormElement).reset();
-    };
-
-    return (
-        <div className="max-w-screen-md mx-auto bg-[#201f31] p-8 rounded-lg">
-             <h3 className="text-2xl font-bold text-white mb-6">Subir capítulo para: {media.title.romaji}</h3>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                    <label htmlFor="chapter-number" className="block text-sm font-medium text-gray-300 mb-2">Número de Capítulo</label>
-                    <input type="text" name="chapter-number" placeholder="Ej: 125 o 125.5" className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#ffbade] focus:outline-none" required />
-                </div>
-                <div>
-                    <label htmlFor="chapter-title" className="block text-sm font-medium text-gray-300 mb-2">Título (Opcional)</label>
-                    <input type="text" name="chapter-title" placeholder="Ej: El Despertar" className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#ffbade] focus:outline-none" />
-                </div>
-                <div>
-                    <label htmlFor="chapter-notes" className="block text-sm font-medium text-gray-300 mb-2">Notas del Scan (Opcional)</label>
-                    <textarea name="chapter-notes" rows={3} placeholder="Notas sobre el lanzamiento..." className="w-full bg-gray-700/50 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#ffbade] focus:outline-none"></textarea>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Páginas del Capítulo</label>
-                    <div className="mt-2 flex justify-center rounded-lg border-2 border-dashed border-gray-600 px-6 py-10">
-                        <div className="text-center">
-                            <UploadCloudIcon />
-                            <p className="mt-4 text-sm text-gray-400">Arrastra o selecciona las páginas</p>
-                            <input name="file-upload" type="file" onChange={handleFileChange} className="text-xs text-gray-500 mt-2" multiple accept="image/*" required/>
-                        </div>
-                    </div>
-                </div>
-                {isUploading && (
-                    <div className="w-full bg-gray-700 rounded-full h-2.5">
-                        <div className="bg-green-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
-                    </div>
-                )}
-                <button type="submit" disabled={isUploading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50">
-                    {isUploading ? `Subiendo... ${Math.round(uploadProgress)}%` : 'Subir Capítulo'}
-                </button>
-            </form>
-        </div>
-    );
-};
-
-
 const MediaDetailPage = ({ params }: { params: { id: string } }) => {
-    // --- LÍNEA CORREGIDA ---
-    const { id } = use(params); // <-- CORRECCIÓN AQUÍ
-    // -------------------------
+    const { id } = use(params);
     const [media, setMedia] = useState<Media | null>(null);
     const [chapters, setChapters] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'chapters' | 'overview' | 'comments' | 'manage_chapter'>('chapters');
+    const [activeTab, setActiveTab] = useState<'chapters' | 'overview' | 'comments'>('chapters');
     const { isLoggedIn, profile, logUserActivity } = useAuth();
     const supabase = createClient();
 
@@ -160,7 +45,6 @@ const MediaDetailPage = ({ params }: { params: { id: string } }) => {
         setIsLoading(false);
     };
 
-    // --- NUEVO useEffect para registrar la visita ---
     useEffect(() => {
         if (isLoggedIn && media) {
             logUserActivity('visit_media', media.id, media.isAdult ?? false, { title: media.title.romaji });
@@ -170,13 +54,6 @@ const MediaDetailPage = ({ params }: { params: { id: string } }) => {
     useEffect(() => {
         loadMediaAndChapters();
     }, [id]);
-
-    const handleSaveChapter = () => {
-        loadMediaAndChapters();
-        setActiveTab('chapters');
-    };
-    
-    const canManageChapters = isLoggedIn; 
 
     if (isLoading || !media) {
         return (
@@ -193,7 +70,7 @@ const MediaDetailPage = ({ params }: { params: { id: string } }) => {
             <main>
                 <div className="relative h-64 md:h-80 w-full">
                     <Image src={media.bannerImage || ''} alt={`${media.title.romaji} Banner`} fill style={{ objectFit: 'cover' }} priority sizes="100vw" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a24] via-[#1a1a24]/50 to-transparent"></div>
+                    <div className="relative inset-0 bg-gradient-to-t from-[#1a1a24] via-[#1a1a24]/50 to-transparent"></div>
                 </div>
                 <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 -mt-32 md:-mt-40">
                     <div className="flex flex-col md:flex-row gap-8">
@@ -212,16 +89,10 @@ const MediaDetailPage = ({ params }: { params: { id: string } }) => {
                              <button onClick={() => setActiveTab('chapters')} className={`px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'chapters' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Capítulos</button>
                             <button onClick={() => setActiveTab('overview')} className={`px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'overview' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Overview</button>
                             <button onClick={() => setActiveTab('comments')} className={`px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'comments' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>Comentarios</button>
-                            {canManageChapters && (
-                                <button onClick={() => setActiveTab('manage_chapter')} className={`px-6 py-3 text-sm font-semibold border-b-2 ${activeTab === 'manage_chapter' ? 'text-white border-[#ffbade]' : 'text-gray-400 border-transparent hover:text-white'}`}>
-                                    Subir Capítulo
-                                </button>
-                            )}
                         </div>
                         {activeTab === 'overview' && <OverviewTab media={media} />}
                         {activeTab === 'chapters' && <ChaptersTab chapters={chapters} mediaId={media.id}/>}
                         {activeTab === 'comments' && <CommentsSection initialComments={media.comments || []} mediaId={media.id} />}
-                        {activeTab === 'manage_chapter' && canManageChapters && <ChapterManagementTab media={media} onSave={handleSaveChapter} />}
                     </div>
                 </div>
             </main>
